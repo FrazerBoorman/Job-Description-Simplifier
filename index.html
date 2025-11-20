@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Job Brief Summariser</title>
+  <meta name="color-scheme" content="light dark" />
+  <style>
+    :root {
+      --bg:#0f172a; --card:#020617; --panel:#020617; --border:#1e293b;
+      --text:#e5e7eb; --muted:#94a3b8; --accent:#38bdf8; --accent-soft:rgba(56,189,248,0.12);
+      --danger:#ef4444;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg:#f8fafc; --card:#ffffff; --panel:#ffffff; --border:#e5e7eb;
+        --text:#020617; --muted:#475569; --accent:#0ea5e9; --accent-soft:rgba(14,165,233,0.10);
+        --danger:#b91c1c;
+      }
+    }
+    * { box-sizing:border-box; }
+    html, body { height:100%; }
+    body {
+      margin:0;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(900px 600px at 5% 0%, rgba(56,189,248,0.10), transparent 55%),
+        radial-gradient(800px 600px at 95% 0%, rgba(129,140,248,0.12), transparent 50%),
+        var(--bg);
+      color:var(--text);
+    }
+    .wrap {
+      max-width: 1000px;
+      margin:0 auto;
+      padding:18px;
+    }
+    .card {
+      background:var(--card);
+      border-radius:18px;
+      border:1px solid var(--border);
+      padding:18px 18px 20px;
+      box-shadow:0 18px 40px rgba(15,23,42,0.4);
+    }
+    h1 {
+      margin:0 0 6px;
+      font-size:24px;
+      letter-spacing:.02em;
+    }
+    .muted { color:var(--muted); font-size:14px; }
+    .pill {
+      display:inline-flex;align-items:center;gap:6px;
+      font-size:11px;padding:3px 9px;border-radius:999px;
+      border:1px solid var(--border);color:var(--muted);
+    }
+    .section {
+      margin-top:16px;
+      padding:12px;
+      border-radius:12px;
+      background:rgba(15,23,42,0.6);
+      border:1px dashed var(--border);
+    }
+    @media (prefers-color-scheme: light) {
+      .section { background:#f9fafb; }
+    }
+    .section-title {
+      font-size:13px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+    label {
+      font-size:13px;
+      font-weight:600;
+      margin-bottom:4px;
+      display:block;
+    }
+    textarea {
+      width:100%;
+      min-height:160px;
+      font-size:14px;
+      padding:9px 10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--panel);
+      color:var(--text);
+      resize:vertical;
+    }
+    textarea::placeholder { color:var(--muted); }
+    .btn-row { display:flex;flex-wrap:wrap;gap:8px;margin-top:10px; }
+    button {
+      border-radius:999px;
+      border:1px solid var(--border);
+      padding:8px 13px;
+      font-size:14px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      background:var(--panel);
+      color:var(--text);
+      cursor:pointer;
+      transition:transform .06s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+    }
+    button.primary {
+      border-color:var(--accent);
+      background:linear-gradient(180deg,var(--accent-soft),transparent);
+    }
+    button:hover {
+      transform:translateY(-1px);
+      box-shadow:0 4px 12px rgba(15,23,42,0.5);
+    }
+    .small-note { font-size:11px;color:var(--muted);margin-top:4px; }
+    #status { font-size:12px;color:var(--muted);margin-top:6px; }
+
+    .grid2 {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+      gap:10px;
+    }
+    .box {
+      padding:8px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--panel);
+      font-size:13px;
+      line-height:1.5;
+      max-height:260px;
+      overflow:auto;
+    }
+    .box h2 {
+      font-size:13px;
+      margin:0 0 4px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      color:var(--muted);
+    }
+    ul { margin:4px 0 6px 18px;padding:0;font-size:13px; }
+    li { margin-bottom:2px; }
+    details.debug summary {
+      cursor:pointer;
+      font-size:12px;
+      color:var(--muted);
+    }
+    details.debug pre {
+      white-space:pre-wrap;
+      font-size:11px;
+      margin-top:4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+        <div>
+          <h1>Job Brief Summariser</h1>
+          <div class="muted">
+            Paste the full job notes. Get a clean brief, Tech Check summary, and a “did we miss anything?” list.
+          </div>
+        </div>
+        <span class="pill">Frazer · AVD Tools</span>
+      </div>
+
+      <!-- INPUT -->
+      <div class="section">
+        <div class="section-title">Step 1 – Paste everything you know about the job</div>
+        <label for="rawInput">Job notes / database dump / tech check / emails / etc.</label>
+        <textarea id="rawInput"
+          placeholder="Paste all the info here: database dump, emails, TECH CHECK notes, address, access instructions, kit list, dates, everything."></textarea>
+        <div class="small-note">
+          Uses the same OpenAI API key as your Job Report Generator
+          (<code>localStorage['avd_job_report_openai_key']</code>).
+        </div>
+        <div class="btn-row">
+          <button id="generateBtn" class="primary" type="button">Generate job brief</button>
+          <button id="copySummaryBtn" type="button">Copy brief</button>
+        </div>
+        <div id="status">Status: Waiting for input…</div>
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="section">
+        <div class="section-title">Step 2 – Review the generated brief</div>
+        <div class="grid2">
+          <div class="box" id="summaryBox">
+            <h2>Job summary (for the day)</h2>
+            <div id="summaryContent">No summary yet.</div>
+          </div>
+          <div class="box" id="techBox">
+            <h2>Tech Check summary</h2>
+            <div id="techContent">No Tech Check found yet.</div>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:10px;">
+          <div class="box">
+            <h2>Key points / checklist</h2>
+            <div id="keyPointsContent">No key points yet.</div>
+          </div>
+          <div class="box">
+            <h2>Potentially missed / ambiguous details</h2>
+            <div id="missedContent">
+              Nothing flagged yet. Once you generate, anything the AI isn’t sure about will be listed here.
+            </div>
+          </div>
+        </div>
+
+        <details class="debug" style="margin-top:8px;">
+          <summary>Debug view (raw AI JSON)</summary>
+          <pre id="debugJson"></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Uses SAME key as Job Report Generator so you don't have to set it twice.
+    // Set once in browser console (if you haven't already):
+    // localStorage.setItem('avd_job_report_openai_key', 'sk-REPLACE_WITH_YOUR_KEY');
+    const OPENAI_KEY_STORAGE = "avd_job_report_openai_key";
+    const OPENAI_MODEL = "gpt-4.1-mini";
+
+    const els = {
+      rawInput:      document.getElementById("rawInput"),
+      generateBtn:   document.getElementById("generateBtn"),
+      copySummaryBtn:document.getElementById("copySummaryBtn"),
+      status:        document.getElementById("status"),
+      summaryContent:document.getElementById("summaryContent"),
+      techContent:   document.getElementById("techContent"),
+      keyPoints:     document.getElementById("keyPointsContent"),
+      missed:        document.getElementById("missedContent"),
+      debugJson:     document.getElementById("debugJson")
+    };
+
+    function setStatus(msg, isError) {
+      els.status.textContent = "Status: " + msg;
+      els.status.style.color = isError ? "var(--danger)" : "var(--muted)";
+    }
+
+    function htmlEscape(str) {
+      return str
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;");
+    }
+
+    async function callOpenAIForBrief(rawText) {
+      const apiKey = localStorage.getItem(OPENAI_KEY_STORAGE);
+      if (!apiKey) {
+        throw new Error("No OpenAI key set in localStorage['" + OPENAI_KEY_STORAGE + "'].");
+      }
+
+      const systemPrompt =
+        "You are assisting an audio-visual company engineer who has pasted a large chunk of mixed job information " +
+        "(database notes, emails, tech check comments, address, access info, kit lists, etc.).\n\n" +
+        "GOAL:\n" +
+        "1) Produce a concise job brief for the engineer to read on the morning of the job. It should be quick to scan but " +
+        "   include the essentials: who, where, when, what is being done, any key constraints.\n" +
+        "2) Produce a Tech Check summary: highlight anything in the text that looks like 'TECH CHECK' notes, concerns raised " +
+        "   by experienced engineers, or technical snags and dependencies. Summarise these clearly.\n" +
+        "3) Produce a structured set of key points grouped into sensible categories (e.g. client & contact, location & access, " +
+        "   schedule, scope of works, equipment/kit, dependencies, risks, open questions).\n" +
+        "4) Do an internal comparison between the entire raw text and what you extracted, and list anything you are not " +
+        "   confident has been fully captured. This is to help the user spot details that might be overlooked. Include short " +
+        "   direct quotes/phrases from the raw text for these items.\n\n" +
+        "IMPORTANT RULES:\n" +
+        "- Do NOT invent any new facts. Only use information that is clearly supported by the raw text.\n" +
+        "- If you are unsure about something, put it into the 'missedOrAmbiguous' list instead of guessing.\n" +
+        "- Keep the jobBrief short enough to read on a phone quickly, but not so short that key details are lost.\n" +
+        "- TechCheckSummary should be focused on risk, snags, and technical concerns.\n\n" +
+        "Return STRICT JSON ONLY in this format:\n" +
+        "{\n" +
+        '  \"jobBrief\": \"Short, readable summary for the engineer to scan before the job.\",\n' +
+        '  \"techCheckSummary\": \"Tech check / snag summary (or empty string).\",\n' +
+        '  \"keyPoints\": [\n' +
+        '    {\n' +
+        '      \"category\": \"Client & contact | Location & access | Schedule | Scope of works | Equipment / kit | Dependencies | Risks | Open questions | Other\",\n' +
+        '      \"items\": [\"bullet point 1\", \"bullet point 2\", \"...\"]\n' +
+        '    },\n' +
+        '    ...\n' +
+        '  ],\n' +
+        '  \"missedOrAmbiguous\": [\n' +
+        '    {\n' +
+        '      \"reason\": \"Why you think this might be missed or unclear.\",\n' +
+        '      \"quote\": \"Short quote/phrase from the original text.\",\n' +
+        '      \"suggestedCategory\": \"Where this probably belongs (e.g. Schedule, Risks, etc.) or empty string.\"\n' +
+        '    },\n' +
+        '    ...\n' +
+        '  ]\n' +
+        "}\n\n" +
+        "No explanations, no extra text, just the JSON object.";
+
+      const body = {
+        model: OPENAI_MODEL,
+        input: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: rawText }
+        ]
+      };
+
+      const res = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + apiKey
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error("OpenAI error " + res.status + ": " + txt);
+      }
+
+      const data = await res.json();
+
+      let rawOut = "";
+      if (
+        data.output &&
+        data.output[0] &&
+        data.output[0].content &&
+        data.output[0].content[0] &&
+        data.output[0].content[0].text
+      ) {
+        rawOut = data.output[0].content[0].text;
+      } else {
+        throw new Error("Unexpected OpenAI response shape.");
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(rawOut);
+      } catch (e) {
+        console.error("Failed to parse JSON from OpenAI:", rawOut);
+        throw new Error("Could not parse JSON from OpenAI.");
+      }
+
+      return parsed;
+    }
+
+    function renderResult(result) {
+      // Summary
+      els.summaryContent.innerHTML = result.jobBrief
+        ? htmlEscape(result.jobBrief).replace(/\n/g,"<br>")
+        : "No summary returned.";
+
+      // Tech Check
+      els.techContent.innerHTML = result.techCheckSummary
+        ? htmlEscape(result.techCheckSummary).replace(/\n/g,"<br>")
+        : "Nothing flagged as Tech Check or snags.";
+
+      // Key points
+      if (Array.isArray(result.keyPoints) && result.keyPoints.length) {
+        const parts = result.keyPoints.map(group => {
+          const cat = group.category || "Other";
+          const items = Array.isArray(group.items) ? group.items : [];
+          if (!items.length) return "";
+          const lis = items.map(i => "<li>" + htmlEscape(i) + "</li>").join("");
+          return "<strong>" + htmlEscape(cat) + ":</strong><ul>" + lis + "</ul>";
+        }).filter(Boolean);
+        els.keyPoints.innerHTML = parts.length ? parts.join("") : "No key points returned.";
+      } else {
+        els.keyPoints.textContent = "No key points returned.";
+      }
+
+      // Missed / ambiguous
+      if (Array.isArray(result.missedOrAmbiguous) && result.missedOrAmbiguous.length) {
+        const lis = result.missedOrAmbiguous.map(item => {
+          const reason = item.reason || "";
+          const quote  = item.quote || "";
+          const cat    = item.suggestedCategory || "";
+          let line = "";
+          if (reason) line += "<strong>Reason:</strong> " + htmlEscape(reason) + "<br>";
+          if (quote)  line += "<strong>From text:</strong> “" + htmlEscape(quote) + "”<br>";
+          if (cat)    line += "<strong>Likely category:</strong> " + htmlEscape(cat);
+          return "<li>" + line + "</li>";
+        }).join("");
+        els.missed.innerHTML = "<ul>" + lis + "</ul>";
+      } else {
+        els.missed.textContent =
+          "AI didn’t flag anything specific as missed or ambiguous. Still worth scanning your original notes.";
+      }
+
+      // Debug
+      els.debugJson.textContent = JSON.stringify(result, null, 2);
+    }
+
+    async function handleGenerate() {
+      const rawText = (els.rawInput.value || "").trim();
+      if (!rawText) {
+        setStatus("Paste some job info first.", true);
+        return;
+      }
+
+      els.generateBtn.disabled = true;
+      setStatus("Talking to OpenAI…", false);
+
+      try {
+        const result = await callOpenAIForBrief(rawText);
+        renderResult(result);
+        setStatus("Brief generated. Check summary, Tech Check and 'missed' list.", false);
+      } catch (err) {
+        console.error(err);
+        setStatus(err.message || "Something went wrong.", true);
+      } finally {
+        els.generateBtn.disabled = false;
+      }
+    }
+
+    async function handleCopySummary() {
+      const text = els.summaryContent.textContent || "";
+      if (!text.trim()) {
+        alert("No summary to copy yet. Generate first.");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(text);
+        alert("Summary copied to clipboard.");
+      } catch {
+        alert("Could not copy automatically. You may need to select and copy manually.");
+      }
+    }
+
+    els.generateBtn.addEventListener("click", handleGenerate);
+    els.copySummaryBtn.addEventListener("click", handleCopySummary);
+  </script>
+</body>
+</html>
