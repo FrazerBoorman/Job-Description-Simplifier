@@ -3,8 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Job Brief Summariser</title>
+  <title>Job Description Simplifier</title>
   <meta name="color-scheme" content="light dark" />
+  <!-- Google OAuth client ID -->
+  <meta name="google-oauth-client-id"
+        content="105230737516-l8tlnck4idde83pjetrotobpt8borvts.apps.googleusercontent.com" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
   <style>
     :root {
       --bg:#0f172a; --card:#020617; --panel:#020617; --border:#1e293b;
@@ -32,17 +37,17 @@
     .wrap {
       max-width: 1000px;
       margin:0 auto;
-      padding:18px;
+      padding:18px 16px 26px;
     }
     .card {
       background:var(--card);
-      border-radius:18px;
+      border-radius:20px;
       border:1px solid var(--border);
       padding:18px 18px 20px;
-      box-shadow:0 18px 40px rgba(15,23,42,0.4);
+      box-shadow:0 18px 40px rgba(15,23,42,0.45);
     }
     h1 {
-      margin:0 0 6px;
+      margin:0 0 4px;
       font-size:24px;
       letter-spacing:.02em;
     }
@@ -53,10 +58,10 @@
       border:1px solid var(--border);color:var(--muted);
     }
     .section {
-      margin-top:16px;
+      margin-top:14px;
       padding:12px;
       border-radius:12px;
-      background:rgba(15,23,42,0.6);
+      background:rgba(15,23,42,0.65);
       border:1px dashed var(--border);
     }
     @media (prefers-color-scheme: light) {
@@ -76,19 +81,24 @@
       margin-bottom:4px;
       display:block;
     }
-    textarea {
+    input, select, textarea {
       width:100%;
-      min-height:160px;
       font-size:14px;
-      padding:9px 10px;
+      padding:8px 10px;
       border-radius:10px;
       border:1px solid var(--border);
       background:var(--panel);
       color:var(--text);
-      resize:vertical;
     }
-    textarea::placeholder { color:var(--muted); }
-    .btn-row { display:flex;flex-wrap:wrap;gap:8px;margin-top:10px; }
+    textarea { resize:vertical; min-height:80px; }
+    input::placeholder, textarea::placeholder { color:var(--muted); }
+
+    .grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap:10px;
+    }
+    .btn-row { display:flex;flex-wrap:wrap;gap:8px;margin-top:8px; }
     button {
       border-radius:999px;
       border:1px solid var(--border);
@@ -110,42 +120,18 @@
       transform:translateY(-1px);
       box-shadow:0 4px 12px rgba(15,23,42,0.5);
     }
-    .small-note { font-size:11px;color:var(--muted);margin-top:4px; }
-    #status { font-size:12px;color:var(--muted);margin-top:6px; }
 
-    .grid2 {
-      display:grid;
-      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-      gap:10px;
-    }
+    .small-note { font-size:11px;color:var(--muted);margin-top:3px; }
+    #status, #aiStatus { font-size:12px;color:var(--muted);margin-top:4px; }
+    .danger { color:var(--danger); }
+
     .box {
-      padding:8px;
       border-radius:10px;
       border:1px solid var(--border);
       background:var(--panel);
+      padding:8px;
       font-size:13px;
-      line-height:1.5;
-      max-height:260px;
-      overflow:auto;
-    }
-    .box h2 {
-      font-size:13px;
-      margin:0 0 4px;
-      text-transform:uppercase;
-      letter-spacing:.06em;
-      color:var(--muted);
-    }
-    ul { margin:4px 0 6px 18px;padding:0;font-size:13px; }
-    li { margin-bottom:2px; }
-    details.debug summary {
-      cursor:pointer;
-      font-size:12px;
-      color:var(--muted);
-    }
-    details.debug pre {
-      white-space:pre-wrap;
-      font-size:11px;
-      margin-top:4px;
+      line-height:1.4;
     }
   </style>
 </head>
@@ -154,276 +140,346 @@
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
         <div>
-          <h1>Job Brief Summariser</h1>
+          <h1>Job Description Simplifier</h1>
           <div class="muted">
-            Paste the full job notes. Get a clean brief, Tech Check summary, and a “did we miss anything?” list.
+            Pick an event or paste text, then get a shorter, clearer description that doesn’t lose critical details.
           </div>
         </div>
         <span class="pill">Frazer · AVD Tools</span>
       </div>
 
-      <!-- INPUT -->
+      <!-- STEP 1 – Calendar selection -->
       <div class="section">
-        <div class="section-title">Step 1 – Paste everything you know about the job</div>
-        <label for="rawInput">Job notes / database dump / tech check / emails / etc.</label>
-        <textarea id="rawInput"
-          placeholder="Paste all the info here: database dump, emails, TECH CHECK notes, address, access instructions, kit list, dates, everything."></textarea>
-        <div class="small-note">
-          Uses the same OpenAI API key as your Job Report Generator
-          (<code>localStorage['avd_job_report_openai_key']</code>).
-        </div>
-        <div class="btn-row">
-          <button id="generateBtn" class="primary" type="button">Generate job brief</button>
-          <button id="copySummaryBtn" type="button">Copy brief</button>
-        </div>
-        <div id="status">Status: Waiting for input…</div>
-      </div>
-
-      <!-- OUTPUT -->
-      <div class="section">
-        <div class="section-title">Step 2 – Review the generated brief</div>
-        <div class="grid2">
-          <div class="box" id="summaryBox">
-            <h2>Job summary (for the day)</h2>
-            <div id="summaryContent">No summary yet.</div>
+        <div class="section-title">Step 1 – Load events from Google Calendar (last 14 days + today)</div>
+        <div class="grid">
+          <div>
+            <label for="calendarId">Calendar ID</label>
+            <input id="calendarId"
+              value="bb14db72acb2ffd4230316960d02103fa66e54901522ff7b8113eec682f6d42e@group.calendar.google.com" />
+            <div class="small-note">
+              Same calendar as your other tools.
+            </div>
           </div>
-          <div class="box" id="techBox">
-            <h2>Tech Check summary</h2>
-            <div id="techContent">No Tech Check found yet.</div>
+          <div>
+            <label for="eventSelect">Recent events</label>
+            <select id="eventSelect">
+              <option value="">Sign in to load events…</option>
+            </select>
+            <div id="status">Status: Waiting for sign-in…</div>
+            <div id="aiStatus"></div>
           </div>
-        </div>
-
-        <div class="grid2" style="margin-top:10px;">
-          <div class="box">
-            <h2>Key points / checklist</h2>
-            <div id="keyPointsContent">No key points yet.</div>
-          </div>
-          <div class="box">
-            <h2>Potentially missed / ambiguous details</h2>
-            <div id="missedContent">
-              Nothing flagged yet. Once you generate, anything the AI isn’t sure about will be listed here.
+          <div style="align-self:end;">
+            <button id="signinBtn" class="primary" type="button">Sign into Google</button>
+            <div class="small-note">
+              Same OAuth flow pattern as the other AVD tools.
             </div>
           </div>
         </div>
+      </div>
 
-        <details class="debug" style="margin-top:8px;">
-          <summary>Debug view (raw AI JSON)</summary>
-          <pre id="debugJson"></pre>
-        </details>
+      <!-- STEP 2 – Original text -->
+      <div class="section">
+        <div class="section-title">Step 2 – Original job description</div>
+        <div class="grid">
+          <div>
+            <label for="originalTitle">Title</label>
+            <input id="originalTitle" placeholder="Event title will appear here (or type manually)"/>
+          </div>
+        </div>
+        <div style="margin-top:8px;">
+          <label for="originalText">Full description / notes</label>
+          <textarea id="originalText"
+            placeholder="Event description will appear here, including any database dump, access notes, kit details, etc. You can also paste text manually."></textarea>
+          <div class="small-note">
+            If you don’t pick an event, you can just paste whatever text you want simplified.
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 – Simplify -->
+      <div class="section">
+        <div class="section-title">Step 3 – Simplify (without losing important details)</div>
+        <div class="btn-row">
+          <button id="simplifyBtn" class="primary" type="button">Simplify description</button>
+          <button id="copyBtn" type="button">Copy simplified text</button>
+        </div>
+        <div class="small-note">
+          Uses your OpenAI key from <code>localStorage['avd_job_report_openai_key']</code>.  
+          Set it once in browser devtools: <code>localStorage.setItem('avd_job_report_openai_key','sk-...')</code>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label for="simplifiedText">Simplified description</label>
+          <textarea id="simplifiedText"
+            placeholder="AI output will appear here. You can tweak it before copying into the calendar."></textarea>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
-    // Uses SAME key as Job Report Generator so you don't have to set it twice.
-    // Set once in browser console (if you haven't already):
-    // localStorage.setItem('avd_job_report_openai_key', 'sk-REPLACE_WITH_YOUR_KEY');
+    const CLIENT_ID = "105230737516-l8tlnck4idde83pjetrotobpt8borvts.apps.googleusercontent.com";
+    const SCOPES   = "https://www.googleapis.com/auth/calendar.readonly";
     const OPENAI_KEY_STORAGE = "avd_job_report_openai_key";
-    const OPENAI_MODEL = "gpt-4.1-mini";
+    const TEXT_MODEL = "gpt-4.1-mini";
 
-    const els = {
-      rawInput:      document.getElementById("rawInput"),
-      generateBtn:   document.getElementById("generateBtn"),
-      copySummaryBtn:document.getElementById("copySummaryBtn"),
-      status:        document.getElementById("status"),
-      summaryContent:document.getElementById("summaryContent"),
-      techContent:   document.getElementById("techContent"),
-      keyPoints:     document.getElementById("keyPointsContent"),
-      missed:        document.getElementById("missedContent"),
-      debugJson:     document.getElementById("debugJson")
-    };
+    let tokenClient = null;
+    let accessToken = null;
+    let currentEvents = [];
 
     function setStatus(msg, isError) {
-      els.status.textContent = "Status: " + msg;
-      els.status.style.color = isError ? "var(--danger)" : "var(--muted)";
+      const el = document.getElementById("status");
+      if (!el) return;
+      el.textContent = "Status: " + msg;
+      el.className = isError ? "danger" : "";
     }
-
-    function htmlEscape(str) {
-      return str
+    function setAiStatus(msg, isError) {
+      const el = document.getElementById("aiStatus");
+      if (!el) return;
+      el.textContent = msg || "";
+      el.className = isError ? "danger" : "";
+    }
+    function escapeHtml(str) {
+      return String(str || "")
         .replace(/&/g,"&amp;")
         .replace(/</g,"&lt;")
         .replace(/>/g,"&gt;");
     }
 
-    async function callOpenAIForBrief(rawText) {
-      const apiKey = localStorage.getItem(OPENAI_KEY_STORAGE);
-      if (!apiKey) {
-        throw new Error("No OpenAI key set in localStorage['" + OPENAI_KEY_STORAGE + "'].");
+    // Google Calendar helpers
+    function getEventStartDate(ev) {
+      if (!ev || !ev.start) return null;
+      if (ev.start.date) return new Date(ev.start.date + "T00:00:00Z");
+      if (ev.start.dateTime) return new Date(ev.start.dateTime);
+      return null;
+    }
+    function extractEventDate(ev) {
+      if (!ev || !ev.start) return "";
+      if (ev.start.date) return ev.start.date;
+      if (ev.start.dateTime) return ev.start.dateTime.slice(0,10);
+      return "";
+    }
+
+    function initAuth() {
+      if (!window.google || !google.accounts || !google.accounts.oauth2) return;
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        prompt: "",
+        callback: (resp) => {
+          if (resp && resp.access_token) {
+            accessToken = resp.access_token;
+            setStatus("Signed in. Loading events…", false);
+            loadRecentEvents();
+          } else {
+            setStatus("Sign-in failed.", true);
+          }
+        }
+      });
+    }
+
+    function signInManual() {
+      if (!tokenClient) initAuth();
+      if (!tokenClient) {
+        setStatus("Google auth not ready.", true);
+        return;
+      }
+      tokenClient.requestAccessToken();
+    }
+
+    async function loadRecentEvents() {
+      if (!accessToken) {
+        setStatus("No access token yet.", true);
+        return;
+      }
+      const calId = (document.getElementById("calendarId").value || "primary").trim();
+      const now = new Date();
+      const end = new Date(now);
+      end.setHours(23,59,59,999);
+      const start = new Date(now);
+      start.setDate(start.getDate() - 14);
+      start.setHours(0,0,0,0);
+
+      const url = new URL(
+        "https://www.googleapis.com/calendar/v3/calendars/" +
+        encodeURIComponent(calId) +
+        "/events"
+      );
+      url.searchParams.set("singleEvents","true");
+      url.searchParams.set("orderBy","startTime");
+      url.searchParams.set("timeMin", start.toISOString());
+      url.searchParams.set("timeMax", end.toISOString());
+      url.searchParams.set("maxResults","250");
+
+      const res = await fetch(url.toString(), {
+        headers: { "Authorization":"Bearer " + accessToken }
+      });
+      if (!res.ok) {
+        setStatus("Calendar API error " + res.status, true);
+        return;
+      }
+      const data = await res.json();
+      const items = data.items || [];
+      const nowRef = new Date();
+
+      const processed = items
+        .map(ev => ({ ev, startDate: getEventStartDate(ev) }))
+        .filter(obj => obj.startDate && obj.startDate <= nowRef)
+        .sort((a,b) => b.startDate - a.startDate);
+
+      currentEvents = processed.map(x => x.ev);
+
+      const sel = document.getElementById("eventSelect");
+      sel.innerHTML = "";
+      if (!currentEvents.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No events in last 14 days.";
+        sel.appendChild(opt);
+        setStatus("No recent events found.", false);
+        return;
       }
 
-      const systemPrompt =
-        "You are assisting an audio-visual company engineer who has pasted a large chunk of mixed job information " +
-        "(database notes, emails, tech check comments, address, access info, kit lists, etc.).\n\n" +
-        "GOAL:\n" +
-        "1) Produce a concise job brief for the engineer to read on the morning of the job. It should be quick to scan but " +
-        "   include the essentials: who, where, when, what is being done, any key constraints.\n" +
-        "2) Produce a Tech Check summary: highlight anything in the text that looks like 'TECH CHECK' notes, concerns raised " +
-        "   by experienced engineers, or technical snags and dependencies. Summarise these clearly.\n" +
-        "3) Produce a structured set of key points grouped into sensible categories (e.g. client & contact, location & access, " +
-        "   schedule, scope of works, equipment/kit, dependencies, risks, open questions).\n" +
-        "4) Do an internal comparison between the entire raw text and what you extracted, and list anything you are not " +
-        "   confident has been fully captured. This is to help the user spot details that might be overlooked. Include short " +
-        "   direct quotes/phrases from the raw text for these items.\n\n" +
-        "IMPORTANT RULES:\n" +
-        "- Do NOT invent any new facts. Only use information that is clearly supported by the raw text.\n" +
-        "- If you are unsure about something, put it into the 'missedOrAmbiguous' list instead of guessing.\n" +
-        "- Keep the jobBrief short enough to read on a phone quickly, but not so short that key details are lost.\n" +
-        "- TechCheckSummary should be focused on risk, snags, and technical concerns.\n\n" +
-        "Return STRICT JSON ONLY in this format:\n" +
-        "{\n" +
-        '  \"jobBrief\": \"Short, readable summary for the engineer to scan before the job.\",\n' +
-        '  \"techCheckSummary\": \"Tech check / snag summary (or empty string).\",\n' +
-        '  \"keyPoints\": [\n' +
-        '    {\n' +
-        '      \"category\": \"Client & contact | Location & access | Schedule | Scope of works | Equipment / kit | Dependencies | Risks | Open questions | Other\",\n' +
-        '      \"items\": [\"bullet point 1\", \"bullet point 2\", \"...\"]\n' +
-        '    },\n' +
-        '    ...\n' +
-        '  ],\n' +
-        '  \"missedOrAmbiguous\": [\n' +
-        '    {\n' +
-        '      \"reason\": \"Why you think this might be missed or unclear.\",\n' +
-        '      \"quote\": \"Short quote/phrase from the original text.\",\n' +
-        '      \"suggestedCategory\": \"Where this probably belongs (e.g. Schedule, Risks, etc.) or empty string.\"\n' +
-        '    },\n' +
-        '    ...\n' +
-        '  ]\n' +
-        "}\n\n" +
-        "No explanations, no extra text, just the JSON object.";
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "— Select event —";
+      sel.appendChild(placeholder);
 
-      const body = {
-        model: OPENAI_MODEL,
-        input: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: rawText }
-        ]
-      };
-
-      const res = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + apiKey
-        },
-        body: JSON.stringify(body)
+      currentEvents.forEach((ev, idx) => {
+        const title = ev.summary || "(no title)";
+        const d = extractEventDate(ev);
+        const opt = document.createElement("option");
+        opt.value = String(idx);
+        opt.textContent = (d ? (d + " – ") : "") + title;
+        sel.appendChild(opt);
       });
 
-      if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        throw new Error("OpenAI error " + res.status + ": " + txt);
+      setStatus("Loaded " + currentEvents.length + " events.", false);
+    }
+
+    function fillFromSelectedEvent() {
+      const sel = document.getElementById("eventSelect");
+      if (!sel.value) return;
+      const ev = currentEvents[Number(sel.value)];
+      if (!ev) return;
+      document.getElementById("originalTitle").value = ev.summary || "";
+      const bits = [];
+      if (ev.description) bits.push(ev.description);
+      if (ev.location) bits.push("Location: " + ev.location);
+      document.getElementById("originalText").value =
+        bits.length ? bits.join("\n\n") : "";
+      setStatus("Loaded event details into original fields.", false);
+    }
+
+    // OpenAI
+    function getOpenAIKeyOrThrow() {
+      const key = localStorage.getItem(OPENAI_KEY_STORAGE);
+      if (!key) {
+        throw new Error("No OpenAI API key found in localStorage['" + OPENAI_KEY_STORAGE + "'].");
+      }
+      return key;
+    }
+
+    async function simplifyDescription() {
+      const title = (document.getElementById("originalTitle").value || "").trim();
+      const text  = (document.getElementById("originalText").value || "").trim();
+
+      if (!title && !text) {
+        setAiStatus("Nothing to simplify. Select an event or paste text first.", true);
+        return;
       }
 
-      const data = await res.json();
+      const combined = "Title: " + title + "\n\nDetails:\n" + text;
 
-      let rawOut = "";
-      if (
-        data.output &&
-        data.output[0] &&
-        data.output[0].content &&
-        data.output[0].content[0] &&
-        data.output[0].content[0].text
-      ) {
-        rawOut = data.output[0].content[0].text;
-      } else {
-        throw new Error("Unexpected OpenAI response shape.");
-      }
+      document.getElementById("simplifyBtn").disabled = true;
+      setAiStatus("Talking to OpenAI…", false);
 
-      let parsed;
       try {
-        parsed = JSON.parse(rawOut);
+        const apiKey = getOpenAIKeyOrThrow();
+        const systemPrompt =
+          "You are simplifying an AV job/event description for an engineer who will read it quickly on their phone.\n\n" +
+          "GOAL:\n" +
+          "- Rewrite the description so it is shorter, clearer and easier to scan.\n" +
+          "- KEEP all important factual details: locations, building names, dates, key constraints, key people, kit names, " +
+          "  special requirements, access instructions, and any unusual caveats.\n" +
+          "- Remove waffle, repetition, and internal admin noise that doesn’t help someone understand what they’re doing that day.\n\n" +
+          "Rules:\n" +
+          "- Do NOT invent anything that is not clearly implied by the original text.\n" +
+          "- Do NOT drop important instructions just because they sound boring.\n" +
+          "- It’s fine to reorder information to improve clarity.\n" +
+          "- The output should be suitable for dropping straight into the calendar description.\n\n" +
+          "Output:\n" +
+          "- A single simplified description (1–3 short paragraphs and/or a few bullet points).\n" +
+          "- Do NOT add commentary or labels like 'Summary:' – just the cleaned-up text.";
+
+        const res = await fetch("https://api.openai.com/v1/responses", {
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer " + apiKey
+          },
+          body: JSON.stringify({
+            model: TEXT_MODEL,
+            input: [
+              { role:"system", content: systemPrompt },
+              { role:"user", content: combined }
+            ]
+          })
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error("OpenAI error " + res.status + ": " + txt);
+        }
+        const data = await res.json();
+        let outText = "";
+        if (
+          data.output &&
+          data.output[0] &&
+          data.output[0].content &&
+          data.output[0].content[0] &&
+          data.output[0].content[0].text
+        ) {
+          outText = data.output[0].content[0].text;
+        } else {
+          throw new Error("Unexpected OpenAI response shape.");
+        }
+
+        document.getElementById("simplifiedText").value = outText;
+        setAiStatus("Simplified description ready. Review and tweak if needed.", false);
       } catch (e) {
-        console.error("Failed to parse JSON from OpenAI:", rawOut);
-        throw new Error("Could not parse JSON from OpenAI.");
-      }
-
-      return parsed;
-    }
-
-    function renderResult(result) {
-      // Summary
-      els.summaryContent.innerHTML = result.jobBrief
-        ? htmlEscape(result.jobBrief).replace(/\n/g,"<br>")
-        : "No summary returned.";
-
-      // Tech Check
-      els.techContent.innerHTML = result.techCheckSummary
-        ? htmlEscape(result.techCheckSummary).replace(/\n/g,"<br>")
-        : "Nothing flagged as Tech Check or snags.";
-
-      // Key points
-      if (Array.isArray(result.keyPoints) && result.keyPoints.length) {
-        const parts = result.keyPoints.map(group => {
-          const cat = group.category || "Other";
-          const items = Array.isArray(group.items) ? group.items : [];
-          if (!items.length) return "";
-          const lis = items.map(i => "<li>" + htmlEscape(i) + "</li>").join("");
-          return "<strong>" + htmlEscape(cat) + ":</strong><ul>" + lis + "</ul>";
-        }).filter(Boolean);
-        els.keyPoints.innerHTML = parts.length ? parts.join("") : "No key points returned.";
-      } else {
-        els.keyPoints.textContent = "No key points returned.";
-      }
-
-      // Missed / ambiguous
-      if (Array.isArray(result.missedOrAmbiguous) && result.missedOrAmbiguous.length) {
-        const lis = result.missedOrAmbiguous.map(item => {
-          const reason = item.reason || "";
-          const quote  = item.quote || "";
-          const cat    = item.suggestedCategory || "";
-          let line = "";
-          if (reason) line += "<strong>Reason:</strong> " + htmlEscape(reason) + "<br>";
-          if (quote)  line += "<strong>From text:</strong> “" + htmlEscape(quote) + "”<br>";
-          if (cat)    line += "<strong>Likely category:</strong> " + htmlEscape(cat);
-          return "<li>" + line + "</li>";
-        }).join("");
-        els.missed.innerHTML = "<ul>" + lis + "</ul>";
-      } else {
-        els.missed.textContent =
-          "AI didn’t flag anything specific as missed or ambiguous. Still worth scanning your original notes.";
-      }
-
-      // Debug
-      els.debugJson.textContent = JSON.stringify(result, null, 2);
-    }
-
-    async function handleGenerate() {
-      const rawText = (els.rawInput.value || "").trim();
-      if (!rawText) {
-        setStatus("Paste some job info first.", true);
-        return;
-      }
-
-      els.generateBtn.disabled = true;
-      setStatus("Talking to OpenAI…", false);
-
-      try {
-        const result = await callOpenAIForBrief(rawText);
-        renderResult(result);
-        setStatus("Brief generated. Check summary, Tech Check and 'missed' list.", false);
-      } catch (err) {
-        console.error(err);
-        setStatus(err.message || "Something went wrong.", true);
+        console.error(e);
+        setAiStatus(e.message || "Error simplifying description.", true);
       } finally {
-        els.generateBtn.disabled = false;
+        document.getElementById("simplifyBtn").disabled = false;
       }
     }
 
-    async function handleCopySummary() {
-      const text = els.summaryContent.textContent || "";
-      if (!text.trim()) {
-        alert("No summary to copy yet. Generate first.");
+    async function copySimplified() {
+      const txt = (document.getElementById("simplifiedText").value || "").trim();
+      if (!txt) {
+        alert("No simplified text to copy yet.");
         return;
       }
       try {
-        await navigator.clipboard.writeText(text);
-        alert("Summary copied to clipboard.");
+        await navigator.clipboard.writeText(txt);
+        alert("Simplified text copied to clipboard.");
       } catch {
         alert("Could not copy automatically. You may need to select and copy manually.");
       }
     }
 
-    els.generateBtn.addEventListener("click", handleGenerate);
-    els.copySummaryBtn.addEventListener("click", handleCopySummary);
+    // Init
+    window.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("signinBtn").addEventListener("click", signInManual);
+      document.getElementById("simplifyBtn").addEventListener("click", simplifyDescription);
+      document.getElementById("copyBtn").addEventListener("click", copySimplified);
+      document.getElementById("eventSelect").addEventListener("change", fillFromSelectedEvent);
+
+      setStatus("Waiting for sign-in…", false);
+      // prepare Google auth
+      setTimeout(() => { try { initAuth(); } catch(e){} }, 0);
+    });
   </script>
 </body>
 </html>
