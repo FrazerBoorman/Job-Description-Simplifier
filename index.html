@@ -124,15 +124,6 @@
     .small-note { font-size:11px;color:var(--muted);margin-top:3px; }
     #status, #aiStatus { font-size:12px;color:var(--muted);margin-top:4px; }
     .danger { color:var(--danger); }
-
-    .box {
-      border-radius:10px;
-      border:1px solid var(--border);
-      background:var(--panel);
-      padding:8px;
-      font-size:13px;
-      line-height:1.4;
-    }
   </style>
 </head>
 <body>
@@ -222,7 +213,7 @@
     const CLIENT_ID = "105230737516-l8tlnck4idde83pjetrotobpt8borvts.apps.googleusercontent.com";
     const SCOPES   = "https://www.googleapis.com/auth/calendar.readonly";
     const OPENAI_KEY_STORAGE = "avd_job_report_openai_key";
-    const TEXT_MODEL = "gpt-4.1-mini";
+    const TEXT_MODEL = "gpt-4o-mini"; // IMPORTANT: chat-completions-capable model
 
     let tokenClient = null;
     let accessToken = null;
@@ -427,7 +418,8 @@
 
         if (!res.ok) {
           const txt = await res.text().catch(() => "");
-          throw new Error("OpenAI error " + res.status + ": " + txt);
+          console.error("OpenAI error response:", txt);
+          throw new Error("OpenAI error " + res.status + " – see console for details.");
         }
         const data = await res.json();
         const choice = data.choices && data.choices[0];
@@ -442,7 +434,7 @@
         document.getElementById("simplifiedText").value = outText;
         setAiStatus("Simplified description ready. Review and tweak if needed.", false);
       } catch (e) {
-        console.error(e);
+        console.error("Simplify error:", e);
         setAiStatus(e.message || "Error simplifying description.", true);
       } finally {
         document.getElementById("simplifyBtn").disabled = false;
