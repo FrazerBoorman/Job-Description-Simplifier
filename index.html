@@ -237,6 +237,26 @@
             </div>
           </div>
         </div>
+
+        <details class="advanced" style="margin-top:10px;">
+          <summary>Advanced date range</summary>
+          <div class="grid" style="margin-top:8px;">
+            <div>
+              <label for="advancedStartDate">Start date</label>
+              <input id="advancedStartDate" type="date" />
+              <div class="small-note">Defaults to 14 days ago.</div>
+            </div>
+            <div>
+              <label for="advancedEndDate">End date</label>
+              <input id="advancedEndDate" type="date" />
+              <div class="small-note">Defaults to the end of today.</div>
+            </div>
+          </div>
+          <div class="btn-row" style="margin-top:8px;">
+            <button id="applyRangeBtn" type="button">Apply date range</button>
+            <div class="small-note">Uses the range above when loading events.</div>
+          </div>
+        </details>
       </div>
 
       <!-- STEP 2 – Original text -->
@@ -359,6 +379,36 @@
       if (msg) debugLog("AI: " + msg + (isError ? " [ERROR]" : ""));
     }
 
+    function getDateRangeOrDefault() {
+      const startInput = document.getElementById("advancedStartDate");
+      const endInput = document.getElementById("advancedEndDate");
+
+      const now = new Date();
+      const defaultEnd = new Date(now);
+      defaultEnd.setHours(23,59,59,999);
+      const defaultStart = new Date(now);
+      defaultStart.setDate(defaultStart.getDate() - 14);
+      defaultStart.setHours(0,0,0,0);
+
+      const start = startInput?.value
+        ? new Date(startInput.value + "T00:00:00")
+        : defaultStart;
+      const end = endInput?.value
+        ? new Date(endInput.value + "T23:59:59")
+        : defaultEnd;
+
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        setStatus("Invalid date range. Please use valid dates.", true);
+        return null;
+      }
+      if (start > end) {
+        setStatus("Start date must be on or before the end date.", true);
+        return null;
+      }
+
+      return { start, end };
+    }
+
     function setApiKeyStatus(msg, isError) {
       const el = document.getElementById("apiKeyStatus");
       if (!el) return;
@@ -413,20 +463,30 @@
       tokenClient.requestAccessToken();
     }
 
+    function setDefaultDateRangeInputs() {
+      const startInput = document.getElementById("advancedStartDate");
+      const endInput = document.getElementById("advancedEndDate");
+      const now = new Date();
+
+      const defaultStart = new Date(now);
+      defaultStart.setDate(defaultStart.getDate() - 14);
+      const startVal = defaultStart.toISOString().slice(0, 10);
+      const endVal = now.toISOString().slice(0, 10);
+
+      if (startInput && !startInput.value) startInput.value = startVal;
+      if (endInput && !endInput.value) endInput.value = endVal;
+    }
+
     async function loadRecentEvents() {
       if (!accessToken) {
         setStatus("No access token yet.", true);
         return;
       }
+      const range = getDateRangeOrDefault();
+      if (!range) return;
+      const { start, end } = range;
       const calId = (document.getElementById("calendarId").value || "primary").trim();
-      debugLog("Loading recent events for calendar", calId);
-
-      const now = new Date();
-      const end = new Date(now);
-      end.setHours(23,59,59,999);
-      const start = new Date(now);
-      start.setDate(start.getDate() - 14);
-      start.setHours(0,0,0,0);
+      debugLog("Loading recent events for calendar", { calendar: calId, start: start.toISOString(), end: end.toISOString() });
 
       const url = new URL(
         "https://www.googleapis.com/calendar/v3/calendars/" +
@@ -722,10 +782,15 @@
       document.getElementById("eventSelect").addEventListener("change", fillFromSelectedEvent);
       document.getElementById("saveKeyBtn").addEventListener("click", saveApiKey);
       document.getElementById("clearKeyBtn").addEventListener("click", clearApiKey);
+      document.getElementById("applyRangeBtn").addEventListener("click", () => {
+        setStatus("Loading events with custom range…", false);
+        loadRecentEvents();
+      });
 
       setStatus("Waiting for sign-in…", false);
       debugLog("Page loaded, initialising auth soon…");
       loadStoredApiKey();
+      setDefaultDateRangeInputs();
       setTimeout(() => { try { initAuth(); } catch(e){ debugLog("initAuth threw", e); } }, 0);
     });
   </script>
