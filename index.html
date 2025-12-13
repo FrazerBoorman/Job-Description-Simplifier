@@ -205,9 +205,10 @@
           <h1>
             Job Description Simplifier
             <button id="copyVersionBtn" class="version-tag" type="button"
-                    title="Copy full index.html to clipboard"
-                    aria-label="Copy full index.html to clipboard">v0.1</button>
+                    title="Copy version to clipboard"
+                    aria-label="Copy version to clipboard" data-version="v0.1">v0.1</button>
           </h1>
+          <div class="small-note" id="versionCopyStatus" role="status" aria-live="polite" style="min-height:16px;"></div>
           <div class="muted">
             Pick an event or paste text, then get a shorter, clearer description that doesn’t lose critical details.
           </div>
@@ -238,7 +239,8 @@
           </div>
         </div>
 
-        <details class="advanced" style="margin-top:10px;">
+        <button id="toggleAdvancedRangeBtn" class="pill-btn" type="button" style="margin-top:10px;">Show advanced date range</button>
+        <details id="advancedRange" class="advanced" style="margin-top:10px;" hidden>
           <summary>Advanced date range</summary>
           <div class="grid" style="margin-top:8px;">
             <div>
@@ -477,6 +479,25 @@
       if (endInput && !endInput.value) endInput.value = endVal;
     }
 
+    function toggleAdvancedRange() {
+      const details = document.getElementById("advancedRange");
+      const toggleBtn = document.getElementById("toggleAdvancedRangeBtn");
+      if (!details || !toggleBtn) return;
+
+      const willShow = details.hasAttribute("hidden");
+      if (willShow) {
+        details.removeAttribute("hidden");
+        details.open = true;
+        toggleBtn.textContent = "Hide advanced date range";
+        const summary = details.querySelector("summary");
+        if (summary) summary.focus({ preventScroll: true });
+      } else {
+        details.open = false;
+        details.setAttribute("hidden", "hidden");
+        toggleBtn.textContent = "Show advanced date range";
+      }
+    }
+
     async function loadRecentEvents() {
       if (!accessToken) {
         setStatus("No access token yet.", true);
@@ -678,44 +699,26 @@
       }
     }
 
-    async function getIndexHtmlSource() {
-      const request = new Request("index.html", { cache: "no-cache" });
-      try {
-        const res = await fetch(request);
-        if (!res.ok) {
-          throw new Error("Failed to fetch index.html (" + res.status + ")");
-        }
-        return await res.text();
-      } catch (e) {
-        const dt = document.doctype;
-        const doctype = dt
-          ? "<!DOCTYPE " + dt.name + (dt.publicId ? " PUBLIC \"" + dt.publicId + "\"" : "") +
-            (dt.systemId ? " \"" + dt.systemId + "\"" : "") + ">\n"
-          : "<!DOCTYPE html>\n";
-        return doctype + document.documentElement.outerHTML;
-      }
-    }
-
-    async function copyFullPageHtml() {
-      const htmlString = await getIndexHtmlSource();
+    async function copyVersionTag() {
+      const btn = document.getElementById("copyVersionBtn");
+      const status = document.getElementById("versionCopyStatus");
+      if (!btn) return;
+      const version = btn.dataset.version || btn.textContent.trim();
 
       try {
-        if (navigator.clipboard && typeof ClipboardItem !== "undefined" && navigator.clipboard.write) {
-          const plainBlob = new Blob([htmlString], { type: "text/plain" });
-          const htmlBlob  = new Blob([htmlString], { type: "text/html" });
-          await navigator.clipboard.write([
-            new ClipboardItem({ "text/plain": plainBlob, "text/html": htmlBlob })
-          ]);
-        } else if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(htmlString);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(version);
         } else {
           throw new Error("Clipboard API unavailable");
         }
-        alert("Full index.html copied to clipboard.");
-        return;
+        btn.textContent = "Copied!";
+        if (status) {
+          status.textContent = "Version copied to clipboard.";
+        }
+        setTimeout(() => { btn.textContent = version; }, 1200);
       } catch (e) {
         const helper = document.createElement("textarea");
-        helper.value = htmlString;
+        helper.value = version;
         helper.setAttribute("aria-hidden", "true");
         helper.setAttribute("readonly", "true");
         helper.style.position = "fixed";
@@ -735,12 +738,22 @@
           document.body.removeChild(helper);
         }
 
-        if (fallbackSuccess) {
-          alert("Full index.html copied to clipboard.");
-          return;
+        btn.textContent = fallbackSuccess ? "Copied!" : "Copy failed";
+        if (status) {
+          status.textContent = fallbackSuccess
+            ? "Version copied to clipboard."
+            : "Could not copy version automatically. Please copy manually.";
         }
+        setTimeout(() => { btn.textContent = version; }, 1500);
 
-        alert("Could not copy the full page automatically. You may need to copy manually.");
+        if (!fallbackSuccess) {
+          alert("Could not copy version automatically. Please copy manually.");
+        }
+      }
+
+      if (status) {
+        status.style.opacity = "1";
+        setTimeout(() => { status.textContent = ""; }, 1800);
       }
     }
 
@@ -778,7 +791,7 @@
       document.getElementById("signinBtn").addEventListener("click", signInManual);
       document.getElementById("simplifyBtn").addEventListener("click", simplifyDescription);
       document.getElementById("copyBtn").addEventListener("click", copySimplified);
-      document.getElementById("copyVersionBtn").addEventListener("click", copyFullPageHtml);
+      document.getElementById("copyVersionBtn").addEventListener("click", copyVersionTag);
       document.getElementById("eventSelect").addEventListener("change", fillFromSelectedEvent);
       document.getElementById("saveKeyBtn").addEventListener("click", saveApiKey);
       document.getElementById("clearKeyBtn").addEventListener("click", clearApiKey);
@@ -786,6 +799,7 @@
         setStatus("Loading events with custom range…", false);
         loadRecentEvents();
       });
+      document.getElementById("toggleAdvancedRangeBtn").addEventListener("click", toggleAdvancedRange);
 
       setStatus("Waiting for sign-in…", false);
       debugLog("Page loaded, initialising auth soon…");
