@@ -1,0 +1,8 @@
+[
+  {
+    "code": "JOB-SIMP",
+    "name": "Job Description Simplifier",
+    "path": "tools/JOB-SIMP/",
+    "description": "Put whatever you put into the calendar into this and hit generate to make a clearer summary."
+  }
+]

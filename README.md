@@ -1,2 +1,11 @@
-# Job-Description-Simplifier
-Put whatever you put into the calendar into this and hit generate to make a clearer summary.
+# AVD-Tools
+
+Monorepo landing for all AVD single-page tools. Each tool lives under `/tools/<TOOL_CODE>/` with its own `index.html`, `CODEX.md`, and `context/<TOOL_CODE>.md` manual. No shared CSS/JS yet.
+
+- Root guardrails: [`CODEX.md`](./CODEX.md)
+- UI invariants: [`AVD-UI-CORE.md`](./AVD-UI-CORE.md)
+- Manifest: [`tools.json`](./tools.json)
+- Landing page: [`index.html`](./index.html)
+
+Currently includes:
+- JOB-SIMP — Job Description Simplifier (`tools/JOB-SIMP/`)
