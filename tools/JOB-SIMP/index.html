@@ -1,0 +1,1316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Job Description Simplifier v0.12</title>
+  <meta name="color-scheme" content="light dark" />
+
+  <!-- Google OAuth client ID -->
+  <meta name="google-oauth-client-id"
+        content="105230737516-l8tlnck4idde83pjetrotobpt8borvts.apps.googleusercontent.com" />
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Markdown -> HTML renderer (for rich preview/copy) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+  <!-- Sanitiser for rendered HTML -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js" defer></script>
+
+  <style>
+    :root {
+      --bg:#0f172a; --card:#020617; --panel:#020617; --border:#1e293b;
+      --text:#e5e7eb; --muted:#94a3b8; --accent:#38bdf8; --accent-soft:rgba(56,189,248,0.12);
+      --danger:#ef4444; --ok:#22c55e;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg:#f8fafc; --card:#ffffff; --panel:#ffffff; --border:#e5e7eb;
+        --text:#020617; --muted:#475569; --accent:#0ea5e9; --accent-soft:rgba(14,165,233,0.10);
+        --danger:#b91c1c; --ok:#16a34a;
+      }
+    }
+
+    * { box-sizing:border-box; }
+    html, body { height:100%; }
+    body {
+      margin:0;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(900px 600px at 5% 0%, rgba(56,189,248,0.10), transparent 55%),
+        radial-gradient(800px 600px at 95% 0%, rgba(129,140,248,0.12), transparent 50%),
+        var(--bg);
+      color:var(--text);
+    }
+
+    .wrap { max-width: 1000px; margin:0 auto; padding:18px 16px 26px; }
+    .card {
+      background:var(--card);
+      border-radius:20px;
+      border:1px solid var(--border);
+      padding:18px 18px 20px;
+      box-shadow:0 18px 40px rgba(15,23,42,0.45);
+    }
+
+    .codex-banner {
+      border:1px dashed var(--border);
+      border-radius:12px;
+      padding:10px 12px;
+      margin-bottom:12px;
+      background:rgba(15,23,42,0.4);
+      font-size:12px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px 14px;
+      align-items:center;
+    }
+    @media (prefers-color-scheme: light) {
+      .codex-banner { background:#f3f4f6; }
+    }
+    .codex-banner strong { letter-spacing:.02em; }
+    .codex-banner a {
+      color:var(--accent);
+      text-decoration:none;
+      font-weight:600;
+      border-bottom:1px dashed transparent;
+    }
+    .codex-banner a:hover { border-color:var(--accent); }
+
+    h1 {
+      margin:0;
+      font-size:24px;
+      letter-spacing:.02em;
+      display:flex;
+      align-items:baseline;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .version-tag {
+      font-size:11px;
+      font-weight:600;
+      color:var(--muted);
+      padding:2px 6px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:transparent;
+      cursor:pointer;
+      transition:background .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease, transform .06s ease;
+    }
+    .version-tag:hover {
+      border-color:var(--accent);
+      color:var(--accent);
+      background:var(--accent-soft);
+      box-shadow:0 4px 10px rgba(15,23,42,0.4);
+      transform:translateY(-0.5px);
+    }
+    .version-tag:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+    .muted { color:var(--muted); font-size:14px; }
+
+    .pill-btn {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:11px;
+      padding:3px 9px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+      background:transparent;
+      cursor:pointer;
+      text-decoration:none;
+      transition:background .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease, transform .06s ease;
+    }
+    .pill-btn:hover {
+      border-color:var(--accent);
+      color:var(--accent);
+      background:var(--accent-soft);
+      box-shadow:0 4px 10px rgba(15,23,42,0.4);
+      transform:translateY(-0.5px);
+    }
+    .pill-btn:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+    .section {
+      margin-top:14px;
+      padding:12px;
+      border-radius:12px;
+      background:rgba(15,23,42,0.65);
+      border:1px dashed var(--border);
+    }
+    @media (prefers-color-scheme: light) { .section { background:#f9fafb; } }
+
+    .section-title {
+      font-size:13px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+
+    label { font-size:13px; font-weight:600; margin-bottom:4px; display:block; }
+
+    input, select, textarea, button {
+      font-size:14px;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--panel);
+      color:var(--text);
+    }
+    input, select, textarea { width:100%; }
+    textarea { resize:vertical; min-height:80px; }
+    input::placeholder, textarea::placeholder { color:var(--muted); }
+
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; }
+    .btn-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+
+    button {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      cursor:pointer;
+      transition:transform .06s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+    }
+    button.primary { border-color:var(--accent); background:linear-gradient(180deg,var(--accent-soft),transparent); }
+    button:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,0.5); }
+
+    .small-note { font-size:11px; color:var(--muted); margin-top:3px; }
+    #status, #aiStatus { font-size:12px; color:var(--muted); margin-top:4px; }
+    .danger { color:var(--danger); }
+    .ok { color:var(--ok); }
+
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+
+    /* =========================
+       DETAILS (match OT-CALC)
+       - dashed border + padded container
+       - closed by default
+       - caret indicator (custom)
+       - nested details inherit automatically
+       ========================= */
+    details.avd-details {
+      margin-top:10px;
+      border-radius:12px;
+      border:1px dashed var(--border);
+      padding:8px 10px;
+      background:rgba(15,23,42,0.4);
+      font-size:11px;
+    }
+    @media (prefers-color-scheme: light) {
+      details.avd-details { background:#f3f4f6; }
+    }
+
+    details.avd-details summary {
+      cursor:pointer;
+      font-size:12px;
+      color:var(--muted);
+      list-style:none;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      user-select:none;
+    }
+    details.avd-details summary::-webkit-details-marker { display:none; }
+
+    .caret {
+      width:0; height:0;
+      border-left:5px solid transparent;
+      border-right:5px solid transparent;
+      border-top:7px solid var(--muted);
+      transition:transform .12s ease, border-top-color .12s ease;
+      transform-origin: 50% 40%;
+      opacity:0.85;
+      margin-top:1px;
+    }
+
+    /* subtle highlight when open (NOT bright blue) */
+    details.avd-details[open] { background:rgba(15,23,42,0.55); }
+    @media (prefers-color-scheme: light) {
+      details.avd-details[open] { background:#eef2f7; }
+    }
+    details.avd-details[open] summary { color:var(--text); }
+    details.avd-details[open] summary .caret {
+      transform:rotate(180deg);
+      border-top-color:var(--text);
+      opacity:0.9;
+    }
+
+    /* Debug output box */
+    #debugOutput {
+      margin-top:6px;
+      max-height:220px;
+      overflow:auto;
+      background:var(--panel);
+      border-radius:10px;
+      border:1px solid var(--border);
+      padding:8px;
+      font-size:11px;
+      white-space:pre-wrap;
+    }
+
+    /* Rich output box (contenteditable) */
+    .richbox{
+      width:100%;
+      min-height:140px;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--panel);
+      color:var(--text);
+      font-size:14px;
+      line-height:1.45;
+      overflow:auto;
+    }
+    .richbox:focus{ outline:2px solid rgba(56,189,248,0.25); outline-offset:2px; }
+    .richbox p{ margin:0 0 10px; }
+    .richbox ul{ margin:6px 0 10px 20px; padding:0; }
+    .richbox ol{ margin:6px 0 10px 20px; padding:0; }
+    .richbox li{ margin:4px 0; }
+    .richbox strong{ font-weight:800; }
+
+    /* Make Markdown-ish headings render as normal (Calendar-friendly) */
+    .richbox h1, .richbox h2, .richbox h3, .richbox h4 {
+      margin:0 0 10px;
+      font-size:14px; /* keep sane */
+      font-weight:800;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="codex-banner" role="note" aria-label="CODEX pointers">
+        <strong>CODEX pointers:</strong>
+        <a href="../../CODEX.md">Root CODEX</a>
+        <a href="../../AVD-UI-CORE.md">AVD UI Core</a>
+        <a href="./context/JOB-SIMP.md">Tool manual</a>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+        <div>
+          <h1>
+            <span id="toolNameHeading">Job Description Simplifier</span>
+            <button id="copyVersionBtn" class="version-tag" type="button"
+                    title="Copy full index.html to clipboard"
+                    aria-label="Copy full index.html to clipboard">v0.12</button>
+          </h1>
+          <div class="muted" id="toolShortDescription">
+            Pick an event or paste text, then produce a clean engineer-facing job brief (keeps install-critical details; removes waffle/marketing).
+          </div>
+        </div>
+
+        <button class="pill-btn" type="button"
+                onclick="window.location.href='https://frazerboorman.github.io/';">
+          Frazer · AVD Tools
+        </button>
+      </div>
+
+      <!-- STEP 1 – Calendar selection -->
+      <div class="section">
+        <div class="section-title">Step 1 – Load events from Google Calendar</div>
+
+        <div class="grid">
+          <div>
+            <label for="eventSelect">Events</label>
+            <select id="eventSelect">
+              <option value="">Sign in to load events…</option>
+            </select>
+            <div id="status">Status: Waiting for sign-in…</div>
+            <div id="aiStatus"></div>
+          </div>
+
+          <div style="align-self:end;">
+            <button id="signinBtn" class="primary" type="button">Sign in to Google</button>
+            <div class="small-note">After sign-in, events load automatically for the default range.</div>
+          </div>
+        </div>
+
+        <!-- Advanced date range (future included) -->
+        <details class="avd-details" id="advancedRangeDetails">
+          <summary><span class="caret" aria-hidden="true"></span><span>Advanced date range</span></summary>
+
+          <div class="grid" style="margin-top:10px;">
+            <div>
+              <label for="advancedStartDate">Start date</label>
+              <input id="advancedStartDate" type="date" />
+              <div class="small-note">Defaults to 14 days ago.</div>
+            </div>
+            <div>
+              <label for="advancedEndDate">End date</label>
+              <input id="advancedEndDate" type="date" />
+              <div class="small-note">Defaults to 14 days ahead (future events included).</div>
+            </div>
+          </div>
+
+          <div class="btn-row" style="margin-top:10px;">
+            <button id="applyRangeBtn" type="button">Apply date range</button>
+            <div class="small-note">Loads events inside this range (future events included).</div>
+          </div>
+        </details>
+      </div>
+
+      <!-- STEP 2 – Original text -->
+      <div class="section">
+        <div class="section-title">Step 2 – Original job description</div>
+
+        <div class="grid">
+          <div>
+            <label for="originalTitle">Title</label>
+            <input id="originalTitle" placeholder="Event title will appear here (or type manually)"/>
+          </div>
+        </div>
+
+        <div style="margin-top:8px;">
+          <label for="originalText">Full description / notes</label>
+          <textarea id="originalText"
+            placeholder="Event details will appear here. You can also paste text manually."></textarea>
+          <div class="small-note">
+            Selecting an event pulls the full details payload for that event ID and builds a structured, AI-friendly block.
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 – Simplify -->
+      <div class="section">
+        <div class="section-title">Step 3 – Simplify (engineer brief)</div>
+        <div class="btn-row">
+          <button id="simplifyBtn" class="primary" type="button">Simplify description</button>
+          <button id="copyBtn" type="button">Copy (Rich Text)</button>
+          <button id="copyPlainBtn" type="button">Copy (Plain Text)</button>
+        </div>
+        <div class="small-note">
+          “Copy (Rich Text)” writes HTML + plain-text to clipboard. Google Calendar typically keeps bold + bullets when it accepts HTML paste.
+        </div>
+
+        <div style="margin-top:10px;">
+          <label for="simplifiedRich">Simplified description (Rich Text)</label>
+          <div id="simplifiedRich" class="richbox" contenteditable="true" spellcheck="true"
+               aria-label="Simplified description (Rich Text)"></div>
+          <div class="small-note">
+            You can edit the rich output directly before copying into the calendar.
+          </div>
+
+          <!-- Raw model output kept behind the scenes (useful for debugging / re-rendering) -->
+          <textarea id="simplifiedText" style="display:none;"></textarea>
+        </div>
+      </div>
+
+      <!-- ADVANCED – API & Calendar settings -->
+      <div class="section">
+        <details class="avd-details" id="advancedApiDetails">
+          <summary><span class="caret" aria-hidden="true"></span><span>API & Calendar settings (advanced)</span></summary>
+
+          <div style="margin-top:10px;">
+            <div class="grid">
+              <div>
+                <label for="apiKeyInput">OpenAI API key</label>
+                <input id="apiKeyInput" type="password" autocomplete="off" placeholder="sk-..." />
+                <div class="small-note">
+                  Stored only in this browser via <code>localStorage['avd_job_report_openai_key']</code>.
+                </div>
+              </div>
+
+              <div>
+                <label for="modelSelect">Preferred model (optional)</label>
+                <select id="modelSelect"></select>
+                <div class="small-note">Uses model candidates + automatic fallback if a model fails.</div>
+              </div>
+
+              <div>
+                <label for="calendarId">Calendar ID</label>
+                <input id="calendarId"
+                  value="bb14db72acb2ffd4230316960d02103fa66e54901522ff7b8113eec682f6d42e@group.calendar.google.com" />
+                <div class="small-note">Calendar used when loading events (same as your other tools).</div>
+              </div>
+            </div>
+
+            <div class="btn-row">
+              <button id="saveKeyBtn" type="button">Save key</button>
+              <button id="clearKeyBtn" type="button">Clear key</button>
+              <button id="testOpenAiBtn" class="primary" type="button">Test OpenAI call</button>
+            </div>
+            <div id="apiKeyStatus" class="small-note"></div>
+
+            <details class="avd-details" style="margin-top:10px;">
+              <summary><span class="caret" aria-hidden="true"></span><span>Markdown renderer status</span></summary>
+              <div class="small-note" id="mdStatus" style="margin-top:8px;">Checking…</div>
+            </details>
+          </div>
+        </details>
+      </div>
+
+      <!-- DEBUG PANEL -->
+      <div class="section">
+        <details class="avd-details" id="debugDetails">
+          <summary><span class="caret" aria-hidden="true"></span><span>Debug log (errors / API responses)</span></summary>
+          <pre id="debugOutput">Debug log initialised…</pre>
+        </details>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /*
+      ============================================================
+      AVD JOB-SIMP — TOOL CONSTITUTION + GUARD RAILS (CODEX ONLY)
+      ============================================================
+
+      CODEX POINTERS:
+      - Root: /CODEX.md (high-level shared invariants + editing rules)
+      - UI Core: /AVD-UI-CORE.md (shared UI + storage invariants)
+      - Tool manual: /tools/JOB-SIMP/context/JOB-SIMP.md (full detail, invariants, regression checks)
+
+      Purpose:
+      - Pull as much useful event detail as possible and build an AI-friendly description block.
+      - Engineer selects an event -> title + structured details fill automatically.
+      - AI simplifier consumes the structured block and outputs an engineer-facing brief:
+        - Removes fluff (“positioned as discussed”, sales messaging, brand lists)
+        - Keeps install-critical info (WHAT/WHERE/WHEN/ACCESS/ISSUES)
+        - Bolds location/placement info
+        - Has a dedicated “Noted issues” section when present
+        - Outputs in simple Markdown that we render to Rich Text in the UI + clipboard
+
+      Non-negotiables / invariants:
+      1) Calendar flow:
+         - After OAuth success, auto-fetch events for default range.
+         - Advanced range supports future events; does NOT filter them out.
+         - Selecting an event performs an event.get (full payload) and fills description.
+
+      2) AI-parsing format:
+         - Write a structured “Key: Value” block to originalText.
+         - Include: title, date/time, location, description, attendees (names/emails),
+           organiser/creator if present, conference/join links if present.
+         - Keep it predictable and machine-readable.
+         - NOTE: Calendar API does not provide attendee phone numbers; only include phone numbers if they exist in raw text.
+
+      3) Details UI:
+         - All <details> panels use shared styling (dashed border, padded container,
+           closed by default, subtle open highlight, caret rotation).
+         - Nested details inherit automatically via the shared class.
+
+      4) Rich output + copy:
+         - “Simplified description” display is rich (contenteditable).
+         - Copy button writes BOTH text/html and text/plain to clipboard.
+    */
+
+    // =========================
+    // TOOL METADATA
+    // =========================
+    const TOOL_NAME = "Job Description Simplifier";
+    const TOOL_VERSION = "v0.12";
+
+    // =========================
+    // GOOGLE CALENDAR
+    // =========================
+    const CLIENT_ID = "105230737516-l8tlnck4idde83pjetrotobpt8borvts.apps.googleusercontent.com";
+    const SCOPES   = "https://www.googleapis.com/auth/calendar.readonly";
+
+    // =========================
+    // OPENAI (shared across AVD tools)
+    // =========================
+    const OPENAI_KEY_STORAGE = "avd_job_report_openai_key";
+    const OPENAI_MODEL_CANDIDATES = [
+      "gpt-5.2",
+      "gpt-5.2-mini",
+      "gpt-5.2-nano",
+      "gpt-4.1",
+      "gpt-4.1-mini"
+    ];
+
+    let tokenClient = null;
+    let accessToken = null;
+    let currentEvents = [];
+
+    function debugLog(msg, data) {
+      const el = document.getElementById("debugOutput");
+      if (!el) return;
+      const ts = new Date().toISOString();
+      let line = "[" + ts + "] " + msg;
+      if (data !== undefined) {
+        try { line += " " + JSON.stringify(data); }
+        catch { line += " " + String(data); }
+      }
+      el.textContent += "\n" + line;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function setStatus(msg, isError) {
+      const el = document.getElementById("status");
+      if (!el) return;
+      el.textContent = "Status: " + msg;
+      el.className = isError ? "danger" : "";
+      debugLog("STATUS: " + msg + (isError ? " [ERROR]" : ""));
+    }
+
+    function setAiStatus(msg, isError) {
+      const el = document.getElementById("aiStatus");
+      if (!el) return;
+      el.textContent = msg || "";
+      el.className = isError ? "danger" : "";
+      if (msg) debugLog("AI: " + msg + (isError ? " [ERROR]" : ""));
+    }
+
+    function setApiKeyStatus(msg, isError) {
+      const el = document.getElementById("apiKeyStatus");
+      if (!el) return;
+      el.textContent = msg || "";
+      el.className = "small-note " + (isError ? "danger" : "");
+      if (msg) debugLog("APIKEY: " + msg + (isError ? " [ERROR]" : ""));
+    }
+
+    function setMdStatus(msg, isError) {
+      const el = document.getElementById("mdStatus");
+      if (!el) return;
+      el.textContent = msg || "";
+      el.className = "small-note " + (isError ? "danger" : "");
+    }
+
+    function initModelDropdown() {
+      const sel = document.getElementById("modelSelect");
+      if (!sel) return;
+      sel.innerHTML = "";
+      for (const m of OPENAI_MODEL_CANDIDATES) {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        sel.appendChild(opt);
+      }
+      sel.value = OPENAI_MODEL_CANDIDATES[0];
+    }
+
+    function getPreferredModel() {
+      const sel = document.getElementById("modelSelect");
+      return (sel && sel.value) ? sel.value : OPENAI_MODEL_CANDIDATES[0];
+    }
+
+    // -------------------------
+    // DATE RANGE (future included)
+    // -------------------------
+    function getDateRangeOrDefault() {
+      const startInput = document.getElementById("advancedStartDate");
+      const endInput = document.getElementById("advancedEndDate");
+
+      const now = new Date();
+      const defaultStart = new Date(now);
+      defaultStart.setDate(defaultStart.getDate() - 14);
+      defaultStart.setHours(0,0,0,0);
+
+      const defaultEnd = new Date(now);
+      defaultEnd.setDate(defaultEnd.getDate() + 14);
+      defaultEnd.setHours(23,59,59,999);
+
+      const start = startInput?.value ? new Date(startInput.value + "T00:00:00") : defaultStart;
+      const end   = endInput?.value ? new Date(endInput.value + "T23:59:59.999") : defaultEnd;
+
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        setStatus("Invalid date range. Please use valid dates.", true);
+        return null;
+      }
+      if (start > end) {
+        setStatus("Start date must be on or before the end date.", true);
+        return null;
+      }
+      return { start, end };
+    }
+
+    function setDefaultDateRangeInputs() {
+      const startInput = document.getElementById("advancedStartDate");
+      const endInput = document.getElementById("advancedEndDate");
+      const now = new Date();
+
+      const start = new Date(now);
+      start.setDate(start.getDate() - 14);
+
+      const end = new Date(now);
+      end.setDate(end.getDate() + 14);
+
+      if (startInput && !startInput.value) startInput.value = start.toISOString().slice(0, 10);
+      if (endInput && !endInput.value) endInput.value = end.toISOString().slice(0, 10);
+    }
+
+    // -------------------------
+    // Calendar helpers
+    // -------------------------
+    function getEventStartDate(ev) {
+      if (!ev || !ev.start) return null;
+      if (ev.start.date) return new Date(ev.start.date + "T00:00:00Z");
+      if (ev.start.dateTime) return new Date(ev.start.dateTime);
+      return null;
+    }
+
+    function extractEventDate(ev) {
+      if (!ev || !ev.start) return "";
+      if (ev.start.date) return ev.start.date;
+      if (ev.start.dateTime) return ev.start.dateTime.slice(0,10);
+      return "";
+    }
+
+    function formatDateTimeForBlock(ev) {
+      const start = ev?.start?.dateTime || ev?.start?.date || "";
+      const end = ev?.end?.dateTime || ev?.end?.date || "";
+      if (!start && !end) return "";
+      if (start && end) return `${start} → ${end}`;
+      return start || end;
+    }
+
+    function uniqueStrings(arr) {
+      const out = [];
+      const seen = new Set();
+      for (const x of (arr || [])) {
+        const k = String(x || "").trim();
+        if (!k) continue;
+        const low = k.toLowerCase();
+        if (seen.has(low)) continue;
+        seen.add(low);
+        out.push(k);
+      }
+      return out;
+    }
+
+    function normaliseJoinUrls(ev) {
+      const urls = [];
+      const entryPoints = ev?.conferenceData?.entryPoints || [];
+      for (const ep of entryPoints) {
+        if (ep?.uri) urls.push(ep.uri);
+      }
+      if (ev?.hangoutLink) urls.push(ev.hangoutLink);
+      return uniqueStrings(urls);
+    }
+
+    function formatAttendees(ev) {
+      const atts = ev?.attendees || [];
+      const lines = [];
+
+      for (const a of atts) {
+        const name = (a.displayName || "").trim();
+        const email = (a.email || "").trim();
+        const extraFlags = [];
+        if (a.organizer) extraFlags.push("organizer");
+        if (a.self) extraFlags.push("self");
+        if (a.resource) extraFlags.push("resource");
+        if (a.optional) extraFlags.push("optional");
+        if (a.responseStatus) extraFlags.push(a.responseStatus);
+
+        const flagStr = extraFlags.length ? ` (${extraFlags.join(", ")})` : "";
+        if (name && email) lines.push(`${name} <${email}>${flagStr}`);
+        else if (email) lines.push(`${email}${flagStr}`);
+        else if (name) lines.push(`${name}${flagStr}`);
+      }
+
+      return uniqueStrings(lines);
+    }
+
+    function buildAiParseBlock(evFull) {
+      const title = (evFull?.summary || "").trim();
+      const when = formatDateTimeForBlock(evFull);
+      const location = (evFull?.location || "").trim();
+      const description = (evFull?.description || "").trim();
+
+      const organiserName = (evFull?.organizer?.displayName || "").trim();
+      const organiserEmail = (evFull?.organizer?.email || "").trim();
+      const creatorName = (evFull?.creator?.displayName || "").trim();
+      const creatorEmail = (evFull?.creator?.email || "").trim();
+
+      const status = (evFull?.status || "").trim();
+      const visibility = (evFull?.visibility || "").trim();
+
+      const attendees = formatAttendees(evFull);
+      const joinUrls = normaliseJoinUrls(evFull);
+
+      const extShared = evFull?.extendedProperties?.shared || null;
+      const extPrivate = evFull?.extendedProperties?.private || null;
+
+      const lines = [];
+      lines.push("=== EVENT (AI PARSE) ===");
+
+      if (title) lines.push(`Title: ${title}`);
+      if (when) lines.push(`When: ${when}`);
+      if (status) lines.push(`Status: ${status}`);
+      if (visibility) lines.push(`Visibility: ${visibility}`);
+      if (location) lines.push(`Location: ${location}`);
+
+      if (organiserName || organiserEmail) {
+        lines.push(`Organiser: ${[organiserName, organiserEmail].filter(Boolean).join(" | ")}`);
+      }
+      if (creatorName || creatorEmail) {
+        lines.push(`Creator: ${[creatorName, creatorEmail].filter(Boolean).join(" | ")}`);
+      }
+
+      if (joinUrls.length) {
+        lines.push("Join URLs:");
+        for (const u of joinUrls) lines.push(`- ${u}`);
+      }
+
+      if (attendees.length) {
+        lines.push("Attendees:");
+        for (const a of attendees) lines.push(`- ${a}`);
+      }
+
+      if (extShared && typeof extShared === "object") {
+        const keys = Object.keys(extShared);
+        if (keys.length) {
+          lines.push("Extended properties (shared):");
+          for (const k of keys) lines.push(`- ${k}: ${String(extShared[k])}`);
+        }
+      }
+
+      if (extPrivate && typeof extPrivate === "object") {
+        const keys = Object.keys(extPrivate);
+        if (keys.length) {
+          lines.push("Extended properties (private):");
+          for (const k of keys) lines.push(`- ${k}: ${String(extPrivate[k])}`);
+        }
+      }
+
+      lines.push("");
+      lines.push("Description (raw):");
+      lines.push(description ? description : "(none)");
+      lines.push("");
+      lines.push("=== END ===");
+
+      return lines.join("\n");
+    }
+
+    // -------------------------
+    // Google Auth (robust init)
+    // -------------------------
+    function isGoogleOauthReady() {
+      return !!(window.google && google.accounts && google.accounts.oauth2 && typeof google.accounts.oauth2.initTokenClient === "function");
+    }
+
+    function initAuthOnceReady() {
+      if (!isGoogleOauthReady()) return false;
+
+      if (tokenClient) return true;
+
+      debugLog("Initialising Google token client…");
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        prompt: "",
+        callback: (resp) => {
+          debugLog("Google OAuth callback received", resp);
+          if (resp?.access_token) {
+            accessToken = resp.access_token;
+            setStatus("Signed in. Loading events…", false);
+            loadEventsInRange();
+          } else {
+            setStatus("Sign-in failed.", true);
+          }
+        }
+      });
+
+      debugLog("Google token client initialised.");
+      return true;
+    }
+
+    function ensureAuthReadyWithRetry({ maxMs = 6000, intervalMs = 150 } = {}) {
+      const started = Date.now();
+      return new Promise((resolve) => {
+        const tick = () => {
+          if (initAuthOnceReady()) return resolve(true);
+          if (Date.now() - started >= maxMs) return resolve(false);
+          setTimeout(tick, intervalMs);
+        };
+        tick();
+      });
+    }
+
+    async function signInManual() {
+      debugLog("Sign-in button clicked.");
+      setStatus("Preparing Google sign-in…", false);
+
+      const ok = await ensureAuthReadyWithRetry();
+      if (!ok || !tokenClient) {
+        setStatus("Google sign-in not ready (gsi script not loaded). Refresh and try again.", true);
+        return;
+      }
+
+      tokenClient.requestAccessToken();
+    }
+
+    // -------------------------
+    // Calendar API calls
+    // -------------------------
+    async function loadEventsInRange() {
+      if (!accessToken) { setStatus("No access token yet.", true); return; }
+
+      const range = getDateRangeOrDefault();
+      if (!range) return;
+
+      const { start, end } = range;
+      const calId = (document.getElementById("calendarId").value || "primary").trim();
+
+      debugLog("Loading events for calendar", {
+        calendar: calId,
+        start: start.toISOString(),
+        end: end.toISOString()
+      });
+
+      const url = new URL("https://www.googleapis.com/calendar/v3/calendars/" + encodeURIComponent(calId) + "/events");
+      url.searchParams.set("singleEvents", "true");
+      url.searchParams.set("orderBy", "startTime");
+      url.searchParams.set("timeMin", start.toISOString());
+      url.searchParams.set("timeMax", end.toISOString());
+      url.searchParams.set("maxResults", "250");
+
+      try {
+        const res = await fetch(url.toString(), { headers: { "Authorization": "Bearer " + accessToken } });
+        debugLog("Calendar list response status", res.status);
+
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          debugLog("Calendar list error body", txt);
+          setStatus("Calendar API error " + res.status, true);
+          return;
+        }
+
+        const data = await res.json();
+        const items = data.items || [];
+        debugLog("Calendar events raw", { count: items.length });
+
+        const processed = items
+          .map(ev => ({ ev, startDate: getEventStartDate(ev) }))
+          .filter(obj => obj.startDate)
+          .sort((a,b) => a.startDate - b.startDate);
+
+        currentEvents = processed.map(x => x.ev);
+
+        const sel = document.getElementById("eventSelect");
+        sel.innerHTML = "";
+
+        if (!currentEvents.length) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = "No events in selected range.";
+          sel.appendChild(opt);
+          setStatus("No events found in that range.", false);
+          return;
+        }
+
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "— Select event —";
+        sel.appendChild(placeholder);
+
+        currentEvents.forEach((ev, idx) => {
+          const title = ev.summary || "(no title)";
+          const d = extractEventDate(ev);
+          const opt = document.createElement("option");
+          opt.value = String(idx);
+          opt.textContent = (d ? (d + " – ") : "") + title;
+          sel.appendChild(opt);
+        });
+
+        setStatus("Loaded " + currentEvents.length + " events.", false);
+      } catch (e) {
+        debugLog("Error loading events", { error: e.message || String(e) });
+        setStatus("Error loading events: " + (e.message || String(e)), true);
+      }
+    }
+
+    async function getEventFull(calendarId, eventId) {
+      const url = new URL("https://www.googleapis.com/calendar/v3/calendars/" + encodeURIComponent(calendarId) + "/events/" + encodeURIComponent(eventId));
+      url.searchParams.set("conferenceDataVersion", "1");
+
+      const res = await fetch(url.toString(), { headers: { "Authorization": "Bearer " + accessToken } });
+      debugLog("Calendar get response status", { status: res.status, eventId });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        debugLog("Calendar get error body (truncated)", txt.slice(0, 800));
+        throw new Error("Calendar event.get error " + res.status);
+      }
+      return await res.json();
+    }
+
+    async function fillFromSelectedEvent() {
+      const sel = document.getElementById("eventSelect");
+      if (!sel || !sel.value) return;
+
+      const evLite = currentEvents[Number(sel.value)];
+      if (!evLite) return;
+
+      const calId = (document.getElementById("calendarId").value || "primary").trim();
+
+      setStatus("Loading full event details…", false);
+      debugLog("Event selected (list item)", { title: evLite.summary || "", id: evLite.id });
+
+      try {
+        const evFull = await getEventFull(calId, evLite.id);
+
+        document.getElementById("originalTitle").value = evFull.summary || "";
+
+        const block = buildAiParseBlock(evFull);
+        document.getElementById("originalText").value = block;
+
+        setStatus("Loaded full event details into original fields.", false);
+      } catch (e) {
+        debugLog("fillFromSelectedEvent failed", { error: e.message || String(e) });
+
+        document.getElementById("originalTitle").value = evLite.summary || "";
+        const bits = [];
+        if (evLite.description) bits.push(evLite.description);
+        if (evLite.location) bits.push("Location: " + evLite.location);
+        document.getElementById("originalText").value = bits.length ? bits.join("\n\n") : "";
+
+        setStatus("Could not load full event. Used basic event fields instead.", true);
+      }
+    }
+
+    // -------------------------
+    // OpenAI helpers (Responses API + fallbacks)
+    // -------------------------
+    function getOpenAIKeyOrThrow() {
+      const key = localStorage.getItem(OPENAI_KEY_STORAGE);
+      if (!key) {
+        debugLog("OpenAI key missing in localStorage", OPENAI_KEY_STORAGE);
+        throw new Error("No OpenAI API key found. Save it in the advanced settings.");
+      }
+      return key;
+    }
+
+    async function callOpenAIWithFallback(systemPrompt, userPrompt) {
+      const apiKey = getOpenAIKeyOrThrow();
+
+      const models = [];
+      const preferred = getPreferredModel();
+      if (preferred) models.push(preferred);
+      for (const m of OPENAI_MODEL_CANDIDATES) if (!models.includes(m)) models.push(m);
+
+      let lastErr = null;
+
+      for (const model of models) {
+        try {
+          debugLog("OpenAI attempt", { model });
+
+          const res = await fetch("https://api.openai.com/v1/responses", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + apiKey },
+            body: JSON.stringify({
+              model,
+              input: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt }
+              ]
+            })
+          });
+
+          debugLog("OpenAI response status", { model, status: res.status });
+
+          if (!res.ok) {
+            const txt = await res.text().catch(() => "");
+            lastErr = new Error("OpenAI " + res.status + " (" + model + "): " + txt.slice(0, 300));
+            debugLog("OpenAI error body (truncated)", { model, body: txt.slice(0, 500) });
+            continue;
+          }
+
+          const data = await res.json();
+
+          let outText = "";
+          try {
+            const maybe = data?.output?.[0]?.content?.[0];
+            outText = (maybe?.text || "").trim();
+          } catch { /* ignore */ }
+
+          if (!outText) {
+            lastErr = new Error("OpenAI returned empty content (" + model + ").");
+            debugLog("OpenAI empty content", { model });
+            continue;
+          }
+
+          return { modelUsed: model, text: outText };
+        } catch (e) {
+          lastErr = e;
+          debugLog("OpenAI exception", { model, error: e.message || String(e) });
+        }
+      }
+
+      throw lastErr || new Error("OpenAI call failed.");
+    }
+
+    async function testOpenAiCall() {
+      try {
+        setAiStatus("Testing OpenAI…", false);
+        const system = "Reply with a single short sentence. No extra text.";
+        const user = "Say: OpenAI is connected.";
+        const result = await callOpenAIWithFallback(system, user);
+        setAiStatus("OpenAI OK (" + result.modelUsed + "): " + result.text, false);
+      } catch (e) {
+        setAiStatus("OpenAI test failed: " + (e.message || String(e)), true);
+      }
+    }
+
+    // -------------------------
+    // Markdown -> Rich rendering + clipboard
+    // -------------------------
+    function ensureMarkedConfig() {
+      if (!window.marked) return false;
+      // Calendar-friendly: treat single newlines as <br> and keep lists stable.
+      marked.setOptions({
+        gfm: true,
+        breaks: true,
+        mangle: false,
+        headerIds: false
+      });
+      return true;
+    }
+
+    function markdownToSafeHtml(md) {
+      const rawHtml = window.marked ? marked.parse(md || "") : (md || "");
+      if (!window.DOMPurify) return rawHtml;
+      return DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
+    }
+
+    function setRichFromMarkdown(md) {
+      const raw = (md || "").trim();
+      document.getElementById("simplifiedText").value = raw;
+
+      const richEl = document.getElementById("simplifiedRich");
+      if (!richEl) return;
+
+      if (!raw) {
+        richEl.innerHTML = "";
+        return;
+      }
+
+      const html = markdownToSafeHtml(raw);
+      richEl.innerHTML = html;
+    }
+
+    async function copyRichFinal() {
+      const richEl = document.getElementById("simplifiedRich");
+      if (!richEl) return;
+
+      const html = (richEl.innerHTML || "").trim();
+      const plain = (richEl.innerText || "").trim();
+
+      if (!plain) { alert("No simplified text to copy yet."); return; }
+
+      try {
+        if (navigator.clipboard && typeof ClipboardItem !== "undefined" && navigator.clipboard.write) {
+          const htmlBlob  = new Blob([html],  { type: "text/html" });
+          const textBlob  = new Blob([plain], { type: "text/plain" });
+          await navigator.clipboard.write([ new ClipboardItem({ "text/html": htmlBlob, "text/plain": textBlob }) ]);
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(plain);
+        } else {
+          throw new Error("Clipboard API unavailable");
+        }
+        alert("Copied (rich text where supported).");
+        debugLog("Copied simplified output (rich+plain).");
+      } catch (e) {
+        debugLog("Clipboard copy (rich) failed", { error: e.message || String(e) });
+        alert("Copy failed. You can still select and copy manually.");
+      }
+    }
+
+    async function copyPlainFinal() {
+      const richEl = document.getElementById("simplifiedRich");
+      const plain = (richEl?.innerText || "").trim();
+      if (!plain) { alert("No simplified text to copy yet."); return; }
+      try {
+        await navigator.clipboard.writeText(plain);
+        alert("Copied (plain text).");
+        debugLog("Copied simplified output (plain).");
+      } catch (e) {
+        debugLog("Clipboard copy (plain) failed", { error: e.message || String(e) });
+        alert("Could not copy automatically. You may need to select and copy manually.");
+      }
+    }
+
+    // -------------------------
+    // The actual simplifier prompt (engineer brief)
+    // -------------------------
+    function buildSystemPromptForEngineerBrief() {
+      return (
+        "You are rewriting an AV job/event description for an engineer who will read it quickly on their phone.\n\n" +
+        "GOAL:\n" +
+        "- Produce a clean, practical engineer brief.\n" +
+        "- Remove fluff, sales wording, and vague phrases (e.g. 'positioned as discussed').\n" +
+        "- Keep installation-critical facts: WHAT is being supplied/installed, WHERE it goes, WHEN, access constraints, power/network notes, and any specific instructions.\n\n" +
+        "KEEP / EMPHASISE:\n" +
+        "- Any location/placement instruction MUST be kept and MUST be in **bold**.\n" +
+        "- Keep mic TYPE requirements (handheld vs beltpack/lapel vs headset vs gooseneck) and quantities.\n" +
+        "- Do NOT include brand-option lists (e.g. 'Toa/Trantec/Audio Technica') unless the text specifies a single exact model that matters.\n" +
+        "- Keep prices ONLY if they are explicitly present.\n\n" +
+        "ISSUES SECTION:\n" +
+        "- If the input mentions faults/problems/unknowns/risks (e.g. hiss, cable cut, old amp, needs test), create a dedicated section:\n" +
+        "  **Noted issues / risks**\n" +
+        "  with bullet points.\n" +
+        "- If no issues are mentioned, do NOT add the section.\n\n" +
+        "FORMAT:\n" +
+        "- Output MUST be simple Markdown that renders well to rich text:\n" +
+        "  - Use **bold** for headings and for location/placement lines.\n" +
+        "  - Use short bullet lists.\n" +
+        "  - Avoid deep nesting (max one level).\n" +
+        "- Do not use '#', '##' headings.\n" +
+        "- Do not include 'Summary:' or similar labels.\n\n" +
+        "NO INVENTION:\n" +
+        "- Do not invent details not clearly present.\n" +
+        "- Do not guess brands.\n"
+      );
+    }
+
+    async function simplifyDescription() {
+      const title = (document.getElementById("originalTitle").value || "").trim();
+      const text  = (document.getElementById("originalText").value || "").trim();
+
+      if (!title && !text) {
+        setAiStatus("Nothing to simplify. Select an event or paste text first.", true);
+        return;
+      }
+
+      const combined = "Title: " + title + "\n\nDetails:\n" + text;
+      debugLog("Simplify called", { titleLength: title.length, textLength: text.length });
+
+      document.getElementById("simplifyBtn").disabled = true;
+      setAiStatus("Talking to OpenAI…", false);
+
+      try {
+        const systemPrompt = buildSystemPromptForEngineerBrief();
+        const result = await callOpenAIWithFallback(systemPrompt, combined);
+
+        // Store raw + render to rich
+        setRichFromMarkdown(result.text);
+
+        setAiStatus("Simplified description ready (" + result.modelUsed + ").", false);
+      } catch (e) {
+        debugLog("Simplify error", { error: e.message || String(e) });
+        setAiStatus(e.message || "Error simplifying description.", true);
+      } finally {
+        document.getElementById("simplifyBtn").disabled = false;
+      }
+    }
+
+    // -------------------------
+    // Copy full index.html
+    // -------------------------
+    async function getIndexHtmlSource() {
+      const request = new Request("index.html", { cache: "no-cache" });
+      try {
+        const res = await fetch(request);
+        if (!res.ok) throw new Error("Failed to fetch index.html (" + res.status + ")");
+        return await res.text();
+      } catch (e) {
+        const dt = document.doctype;
+        const doctype = dt
+          ? "<!DOCTYPE " + dt.name + (dt.publicId ? " PUBLIC \"" + dt.publicId + "\"" : "") +
+            (dt.systemId ? " \"" + dt.systemId + "\"" : "") + ">\n"
+          : "<!DOCTYPE html>\n";
+        return doctype + document.documentElement.outerHTML;
+      }
+    }
+
+    async function copyFullPageHtml() {
+      const htmlString = await getIndexHtmlSource();
+      try {
+        if (navigator.clipboard && typeof ClipboardItem !== "undefined" && navigator.clipboard.write) {
+          const plainBlob = new Blob([htmlString], { type: "text/plain" });
+          const htmlBlob  = new Blob([htmlString], { type: "text/html" });
+          await navigator.clipboard.write([ new ClipboardItem({ "text/plain": plainBlob, "text/html": htmlBlob }) ]);
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(htmlString);
+        } else {
+          throw new Error("Clipboard API unavailable");
+        }
+        alert("Full index.html copied to clipboard.");
+      } catch (e) {
+        alert("Could not copy automatically. Select and copy manually.");
+      }
+    }
+
+    // -------------------------
+    // API key storage
+    // -------------------------
+    function loadStoredApiKey() {
+      const key = localStorage.getItem(OPENAI_KEY_STORAGE);
+      const input = document.getElementById("apiKeyInput");
+      if (key && input) {
+        input.value = key;
+        setApiKeyStatus("API key loaded from local storage.", false);
+      } else {
+        setApiKeyStatus("No API key saved yet.", false);
+      }
+    }
+
+    function saveApiKey() {
+      const input = document.getElementById("apiKeyInput");
+      if (!input) return;
+      const val = (input.value || "").trim();
+      if (!val) { setApiKeyStatus("Cannot save an empty key.", true); return; }
+      localStorage.setItem(OPENAI_KEY_STORAGE, val);
+      setApiKeyStatus("API key saved to local storage.", false);
+    }
+
+    function clearApiKey() {
+      localStorage.removeItem(OPENAI_KEY_STORAGE);
+      const input = document.getElementById("apiKeyInput");
+      if (input) input.value = "";
+      setApiKeyStatus("API key cleared from local storage.", false);
+    }
+
+    // -------------------------
+    // INIT
+    // -------------------------
+    window.addEventListener("DOMContentLoaded", async () => {
+      // version pill text
+      const versionBtn = document.getElementById("copyVersionBtn");
+      if (versionBtn) versionBtn.textContent = TOOL_VERSION;
+
+      // ensure details are closed by default on refresh (shared invariant)
+      const allDetails = document.querySelectorAll("details.avd-details");
+      allDetails.forEach(d => { d.open = false; });
+
+      initModelDropdown();
+
+      // Bind buttons
+      document.getElementById("signinBtn").addEventListener("click", signInManual);
+      document.getElementById("simplifyBtn").addEventListener("click", simplifyDescription);
+      document.getElementById("copyBtn").addEventListener("click", copyRichFinal);
+      document.getElementById("copyPlainBtn").addEventListener("click", copyPlainFinal);
+      document.getElementById("copyVersionBtn").addEventListener("click", copyFullPageHtml);
+
+      // Event selection -> fetch full payload via event.get
+      document.getElementById("eventSelect").addEventListener("change", () => {
+        fillFromSelectedEvent();
+      });
+
+      // Advanced date range apply
+      document.getElementById("applyRangeBtn").addEventListener("click", () => {
+        setStatus("Loading events with selected range…", false);
+        loadEventsInRange();
+      });
+
+      // API controls
+      document.getElementById("saveKeyBtn").addEventListener("click", saveApiKey);
+      document.getElementById("clearKeyBtn").addEventListener("click", clearApiKey);
+      document.getElementById("testOpenAiBtn").addEventListener("click", testOpenAiCall);
+
+      setStatus("Waiting for sign-in…", false);
+      debugLog("Page loaded.");
+      loadStoredApiKey();
+      setDefaultDateRangeInputs();
+
+      // Marked/DOMPurify presence check
+      const markedOk = ensureMarkedConfig();
+      const purifyOk = !!window.DOMPurify;
+      if (markedOk && purifyOk) setMdStatus("Markdown renderer ready (marked + DOMPurify).", false);
+      else if (markedOk && !purifyOk) setMdStatus("Marked loaded, DOMPurify missing (sanitise disabled).", true);
+      else setMdStatus("Markdown renderer not loaded yet. (Should load within a second.)", true);
+
+      // Kick auth init in a robust way (does not break the button if GIS loads late)
+      const authReady = await ensureAuthReadyWithRetry({ maxMs: 6000, intervalMs: 150 });
+      if (!authReady) {
+        debugLog("Google OAuth not ready after retry window.");
+        // Do not hard error; button will also retry.
+      }
+    });
+  </script>
+</body>
+</html>

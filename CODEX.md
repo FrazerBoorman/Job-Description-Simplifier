@@ -1,33 +1,27 @@
-# AVD Tools — Codex Front Door (Shared Guardrails)
+# AVD-Tools — Codex Front Door
 
-This repository contains AVD Tools single-file web apps (index.html) with a shared template.
+This monorepo hosts every AVD single-page tool under `/tools/<TOOL_CODE>/`. Each tool keeps its own HTML, CSS, and JS with no shared assets.
 
-## Non‑negotiable shared invariants (all tools)
+## Pointers (always read first)
+- **UI invariants:** [`/AVD-UI-CORE.md`](./AVD-UI-CORE.md)
+- **Tool manuals:** `/tools/<TOOL_CODE>/context/<TOOL_CODE>.md`
+- **Tool-level guardrails:** `/tools/<TOOL_CODE>/CODEX.md`
 
-1) **Versioning**
-- Version pill uses the tool’s semantic version (e.g., `v0.11`).
-- The version pill copies the full `index.html` to clipboard (with robust fallbacks).
+## Layout
+- Landing page: `/index.html` (lists tools via `/tools.json`).
+- Manifest: `/tools.json` (`code`, `name`, `path`, `description`).
+- Tools live in `/tools/<TOOL_CODE>/` with:
+  - `index.html` (self-contained UI)
+  - `CODEX.md` (pointers to this file + UI core + tool manual)
+  - `context/<TOOL_CODE>.md` (manual, invariants, regression checks)
 
-2) **Shared OpenAI API key storage**
-- Use **exactly**: `localStorage['avd_job_report_openai_key']`
-- This key is shared across tools; never silently change this key name.
+## Banner requirement (CODEX ONLY)
+Each tool `index.html` must include a **3-pointer banner** near the top of the document or main script that links to:
+1) `/CODEX.md`
+2) `/AVD-UI-CORE.md`
+3) `/tools/<TOOL_CODE>/context/<TOOL_CODE>.md`
 
-3) **Details panels (UI)**
-- All `<details>` must:
-  - Be **closed by default** on page load/refresh.
-  - Use **dashed border** and **padded container** styling.
-  - Use a **consistent caret marker** that rotates on open.
-  - **Highlight when open**.
-  - Nested `<details>` inherit the same styling automatically.
-
-4) **Calendar range behaviour**
-- Advanced date range must allow future end dates (do not silently clamp to “today”).
-- Do not filter out future events unless explicitly requested.
-
-5) **Safe edit discipline**
-- Avoid refactors that change element IDs, storage keys, or business logic semantics.
-- Prefer small, local fixes.
-- Add regression checks in tool manual docs when behaviour is important.
-
-## Tool manuals
-- Job Description Simplifier: `context/JOB-SIMP.md`
+## Editing discipline
+- Preserve OAuth + Calendar behaviour and OpenAI storage key (`localStorage['avd_job_report_openai_key']`).
+- Keep `<details>` styling and behaviour aligned with [`/AVD-UI-CORE.md`](./AVD-UI-CORE.md).
+- Avoid refactors that change IDs, storage keys, or semantics unless required by the manual.

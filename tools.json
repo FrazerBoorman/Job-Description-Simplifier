@@ -1,0 +1,26 @@
+[
+  {
+    "code": "JOB-SIMP",
+    "name": "Job Description Simplifier",
+    "path": "tools/JOB-SIMP/",
+    "description": "Put whatever you put into the calendar into this and hit generate to make a clearer summary."
+  },
+  {
+    "code": "consultation-meeting-processor",
+    "name": "Consultation Meeting Processor",
+    "path": "tools/consultation-meeting-processor/",
+    "description": "Placeholder entry — awaiting source repo import."
+  },
+  {
+    "code": "job-report-generator",
+    "name": "Job Report Generator",
+    "path": "tools/job-report-generator/",
+    "description": "Placeholder entry — awaiting source repo import."
+  },
+  {
+    "code": "overtime-calculator",
+    "name": "Overtime Calculator",
+    "path": "tools/overtime-calculator/",
+    "description": "Placeholder entry — awaiting source repo import."
+  }
+]
