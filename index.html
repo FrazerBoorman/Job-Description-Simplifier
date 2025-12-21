@@ -3,12 +3,20 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Job Description Simplifier v0.11</title>
+  <title>Job Description Simplifier v0.12</title>
   <meta name="color-scheme" content="light dark" />
+
   <!-- Google OAuth client ID -->
   <meta name="google-oauth-client-id"
         content="105230737516-l8tlnck4idde83pjetrotobpt8borvts.apps.googleusercontent.com" />
+
+  <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <!-- Markdown -> HTML renderer (for rich preview/copy) -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
+  <!-- Sanitiser for rendered HTML -->
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js" defer></script>
 
   <style>
     :root {
@@ -219,6 +227,32 @@
       white-space:pre-wrap;
     }
 
+    /* Rich output box (contenteditable) */
+    .richbox{
+      width:100%;
+      min-height:140px;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--panel);
+      color:var(--text);
+      font-size:14px;
+      line-height:1.45;
+      overflow:auto;
+    }
+    .richbox:focus{ outline:2px solid rgba(56,189,248,0.25); outline-offset:2px; }
+    .richbox p{ margin:0 0 10px; }
+    .richbox ul{ margin:6px 0 10px 20px; padding:0; }
+    .richbox ol{ margin:6px 0 10px 20px; padding:0; }
+    .richbox li{ margin:4px 0; }
+    .richbox strong{ font-weight:800; }
+
+    /* Make Markdown-ish headings render as normal (Calendar-friendly) */
+    .richbox h1, .richbox h2, .richbox h3, .richbox h4 {
+      margin:0 0 10px;
+      font-size:14px; /* keep sane */
+      font-weight:800;
+    }
   </style>
 </head>
 
@@ -232,10 +266,10 @@
             <span id="toolNameHeading">Job Description Simplifier</span>
             <button id="copyVersionBtn" class="version-tag" type="button"
                     title="Copy full index.html to clipboard"
-                    aria-label="Copy full index.html to clipboard">v0.11</button>
+                    aria-label="Copy full index.html to clipboard">v0.12</button>
           </h1>
           <div class="muted" id="toolShortDescription">
-            Pick an event or paste text, then get a shorter, clearer description that doesn’t lose critical details.
+            Pick an event or paste text, then produce a clean engineer-facing job brief (keeps install-critical details; removes waffle/marketing).
           </div>
         </div>
 
@@ -312,19 +346,26 @@
 
       <!-- STEP 3 – Simplify -->
       <div class="section">
-        <div class="section-title">Step 3 – Simplify (without losing important details)</div>
+        <div class="section-title">Step 3 – Simplify (engineer brief)</div>
         <div class="btn-row">
           <button id="simplifyBtn" class="primary" type="button">Simplify description</button>
-          <button id="copyBtn" type="button">Copy simplified text</button>
+          <button id="copyBtn" type="button">Copy (Rich Text)</button>
+          <button id="copyPlainBtn" type="button">Copy (Plain Text)</button>
         </div>
         <div class="small-note">
-          Uses the OpenAI key saved below. You only need to set it once per device.
+          “Copy (Rich Text)” writes HTML + plain-text to clipboard. Google Calendar typically keeps bold + bullets when it accepts HTML paste.
         </div>
 
         <div style="margin-top:10px;">
-          <label for="simplifiedText">Simplified description</label>
-          <textarea id="simplifiedText"
-            placeholder="AI output will appear here. You can tweak it before copying into the calendar."></textarea>
+          <label for="simplifiedRich">Simplified description (Rich Text)</label>
+          <div id="simplifiedRich" class="richbox" contenteditable="true" spellcheck="true"
+               aria-label="Simplified description (Rich Text)"></div>
+          <div class="small-note">
+            You can edit the rich output directly before copying into the calendar.
+          </div>
+
+          <!-- Raw model output kept behind the scenes (useful for debugging / re-rendering) -->
+          <textarea id="simplifiedText" style="display:none;"></textarea>
         </div>
       </div>
 
@@ -363,6 +404,11 @@
               <button id="testOpenAiBtn" class="primary" type="button">Test OpenAI call</button>
             </div>
             <div id="apiKeyStatus" class="small-note"></div>
+
+            <details class="avd-details" style="margin-top:10px;">
+              <summary><span class="caret" aria-hidden="true"></span><span>Markdown renderer status</span></summary>
+              <div class="small-note" id="mdStatus" style="margin-top:8px;">Checking…</div>
+            </details>
           </div>
         </details>
       </div>
@@ -391,11 +437,16 @@
       Purpose:
       - Pull as much useful event detail as possible and build an AI-friendly description block.
       - Engineer selects an event -> title + structured details fill automatically.
-      - AI simplifier consumes the structured block (not just a blank description).
+      - AI simplifier consumes the structured block and outputs an engineer-facing brief:
+        - Removes fluff (“positioned as discussed”, sales messaging, brand lists)
+        - Keeps install-critical info (WHAT/WHERE/WHEN/ACCESS/ISSUES)
+        - Bolds location/placement info
+        - Has a dedicated “Noted issues” section when present
+        - Outputs in simple Markdown that we render to Rich Text in the UI + clipboard
 
       Non-negotiables / invariants:
       1) Calendar flow:
-         - After OAuth success (“Signed in”), auto-fetch events for default range.
+         - After OAuth success, auto-fetch events for default range.
          - Advanced range supports future events; does NOT filter them out.
          - Selecting an event performs an event.get (full payload) and fills description.
 
@@ -404,22 +455,23 @@
          - Include: title, date/time, location, description, attendees (names/emails),
            organiser/creator if present, conference/join links if present.
          - Keep it predictable and machine-readable.
+         - NOTE: Calendar API does not provide attendee phone numbers; only include phone numbers if they exist in raw text.
 
       3) Details UI:
          - All <details> panels use shared styling (dashed border, padded container,
            closed by default, subtle open highlight, caret rotation).
          - Nested details inherit automatically via the shared class.
 
-      4) Safe edits:
-         - Do not silently change key storage key or model list semantics.
-         - Do not remove event.get; that is required for maximum detail.
+      4) Rich output + copy:
+         - “Simplified description” display is rich (contenteditable).
+         - Copy button writes BOTH text/html and text/plain to clipboard.
     */
 
     // =========================
     // TOOL METADATA
     // =========================
     const TOOL_NAME = "Job Description Simplifier";
-    const TOOL_VERSION = "v0.11";
+    const TOOL_VERSION = "v0.12";
 
     // =========================
     // GOOGLE CALENDAR
@@ -478,6 +530,13 @@
       el.textContent = msg || "";
       el.className = "small-note " + (isError ? "danger" : "");
       if (msg) debugLog("APIKEY: " + msg + (isError ? " [ERROR]" : ""));
+    }
+
+    function setMdStatus(msg, isError) {
+      const el = document.getElementById("mdStatus");
+      if (!el) return;
+      el.textContent = msg || "";
+      el.className = "small-note " + (isError ? "danger" : "");
     }
 
     function initModelDropdown() {
@@ -584,17 +643,11 @@
 
     function normaliseJoinUrls(ev) {
       const urls = [];
-
-      // Google Meet / conferenceData
       const entryPoints = ev?.conferenceData?.entryPoints || [];
       for (const ep of entryPoints) {
         if (ep?.uri) urls.push(ep.uri);
       }
       if (ev?.hangoutLink) urls.push(ev.hangoutLink);
-
-      // Some events include links inside description; we won't parse aggressively,
-      // but we will include the raw description anyway.
-
       return uniqueStrings(urls);
     }
 
@@ -622,9 +675,6 @@
     }
 
     function buildAiParseBlock(evFull) {
-      // NOTE (Be Strict): Google Calendar API does not provide attendee phone numbers.
-      // If phone numbers exist, they will only appear if someone typed them into the description/location fields.
-
       const title = (evFull?.summary || "").trim();
       const when = formatDateTimeForBlock(evFull);
       const location = (evFull?.location || "").trim();
@@ -641,7 +691,6 @@
       const attendees = formatAttendees(evFull);
       const joinUrls = normaliseJoinUrls(evFull);
 
-      // Extended properties (sometimes used for internal metadata)
       const extShared = evFull?.extendedProperties?.shared || null;
       const extPrivate = evFull?.extendedProperties?.private || null;
 
@@ -687,12 +736,9 @@
         }
       }
 
-      lines.push(""); // spacing
-
-      // Raw free text at the end (this is where phone numbers might exist if typed)
+      lines.push("");
       lines.push("Description (raw):");
       lines.push(description ? description : "(none)");
-
       lines.push("");
       lines.push("=== END ===");
 
@@ -700,15 +746,18 @@
     }
 
     // -------------------------
-    // Google Auth
+    // Google Auth (robust init)
     // -------------------------
-    function initAuth() {
-      debugLog("Initialising Google auth…");
-      if (!window.google?.accounts?.oauth2) {
-        debugLog("Google accounts OAuth2 not available yet.");
-        return;
-      }
+    function isGoogleOauthReady() {
+      return !!(window.google && google.accounts && google.accounts.oauth2 && typeof google.accounts.oauth2.initTokenClient === "function");
+    }
 
+    function initAuthOnceReady() {
+      if (!isGoogleOauthReady()) return false;
+
+      if (tokenClient) return true;
+
+      debugLog("Initialising Google token client…");
       tokenClient = google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
         scope: SCOPES,
@@ -726,15 +775,31 @@
       });
 
       debugLog("Google token client initialised.");
+      return true;
     }
 
-    function signInManual() {
+    function ensureAuthReadyWithRetry({ maxMs = 6000, intervalMs = 150 } = {}) {
+      const started = Date.now();
+      return new Promise((resolve) => {
+        const tick = () => {
+          if (initAuthOnceReady()) return resolve(true);
+          if (Date.now() - started >= maxMs) return resolve(false);
+          setTimeout(tick, intervalMs);
+        };
+        tick();
+      });
+    }
+
+    async function signInManual() {
       debugLog("Sign-in button clicked.");
-      if (!tokenClient) initAuth();
-      if (!tokenClient) {
-        setStatus("Google auth not ready.", true);
+      setStatus("Preparing Google sign-in…", false);
+
+      const ok = await ensureAuthReadyWithRetry();
+      if (!ok || !tokenClient) {
+        setStatus("Google sign-in not ready (gsi script not loaded). Refresh and try again.", true);
         return;
       }
+
       tokenClient.requestAccessToken();
     }
 
@@ -778,7 +843,6 @@
         const items = data.items || [];
         debugLog("Calendar events raw", { count: items.length });
 
-        // DO NOT filter out future events.
         const processed = items
           .map(ev => ({ ev, startDate: getEventStartDate(ev) }))
           .filter(obj => obj.startDate)
@@ -821,7 +885,6 @@
 
     async function getEventFull(calendarId, eventId) {
       const url = new URL("https://www.googleapis.com/calendar/v3/calendars/" + encodeURIComponent(calendarId) + "/events/" + encodeURIComponent(eventId));
-      // conferenceDataVersion ensures conferenceData is included where available
       url.searchParams.set("conferenceDataVersion", "1");
 
       const res = await fetch(url.toString(), { headers: { "Authorization": "Bearer " + accessToken } });
@@ -852,7 +915,6 @@
 
         document.getElementById("originalTitle").value = evFull.summary || "";
 
-        // Structured AI-parse block (includes raw description at end)
         const block = buildAiParseBlock(evFull);
         document.getElementById("originalText").value = block;
 
@@ -860,7 +922,6 @@
       } catch (e) {
         debugLog("fillFromSelectedEvent failed", { error: e.message || String(e) });
 
-        // Fallback (still fill something rather than blank)
         document.getElementById("originalTitle").value = evLite.summary || "";
         const bits = [];
         if (evLite.description) bits.push(evLite.description);
@@ -920,10 +981,8 @@
 
           const data = await res.json();
 
-          // Extract text from Responses API payload
           let outText = "";
           try {
-            // Common shape: output[0].content[0].text
             const maybe = data?.output?.[0]?.content?.[0];
             outText = (maybe?.text || "").trim();
           } catch { /* ignore */ }
@@ -956,6 +1015,117 @@
       }
     }
 
+    // -------------------------
+    // Markdown -> Rich rendering + clipboard
+    // -------------------------
+    function ensureMarkedConfig() {
+      if (!window.marked) return false;
+      // Calendar-friendly: treat single newlines as <br> and keep lists stable.
+      marked.setOptions({
+        gfm: true,
+        breaks: true,
+        mangle: false,
+        headerIds: false
+      });
+      return true;
+    }
+
+    function markdownToSafeHtml(md) {
+      const rawHtml = window.marked ? marked.parse(md || "") : (md || "");
+      if (!window.DOMPurify) return rawHtml;
+      return DOMPurify.sanitize(rawHtml, { USE_PROFILES: { html: true } });
+    }
+
+    function setRichFromMarkdown(md) {
+      const raw = (md || "").trim();
+      document.getElementById("simplifiedText").value = raw;
+
+      const richEl = document.getElementById("simplifiedRich");
+      if (!richEl) return;
+
+      if (!raw) {
+        richEl.innerHTML = "";
+        return;
+      }
+
+      const html = markdownToSafeHtml(raw);
+      richEl.innerHTML = html;
+    }
+
+    async function copyRichFinal() {
+      const richEl = document.getElementById("simplifiedRich");
+      if (!richEl) return;
+
+      const html = (richEl.innerHTML || "").trim();
+      const plain = (richEl.innerText || "").trim();
+
+      if (!plain) { alert("No simplified text to copy yet."); return; }
+
+      try {
+        if (navigator.clipboard && typeof ClipboardItem !== "undefined" && navigator.clipboard.write) {
+          const htmlBlob  = new Blob([html],  { type: "text/html" });
+          const textBlob  = new Blob([plain], { type: "text/plain" });
+          await navigator.clipboard.write([ new ClipboardItem({ "text/html": htmlBlob, "text/plain": textBlob }) ]);
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(plain);
+        } else {
+          throw new Error("Clipboard API unavailable");
+        }
+        alert("Copied (rich text where supported).");
+        debugLog("Copied simplified output (rich+plain).");
+      } catch (e) {
+        debugLog("Clipboard copy (rich) failed", { error: e.message || String(e) });
+        alert("Copy failed. You can still select and copy manually.");
+      }
+    }
+
+    async function copyPlainFinal() {
+      const richEl = document.getElementById("simplifiedRich");
+      const plain = (richEl?.innerText || "").trim();
+      if (!plain) { alert("No simplified text to copy yet."); return; }
+      try {
+        await navigator.clipboard.writeText(plain);
+        alert("Copied (plain text).");
+        debugLog("Copied simplified output (plain).");
+      } catch (e) {
+        debugLog("Clipboard copy (plain) failed", { error: e.message || String(e) });
+        alert("Could not copy automatically. You may need to select and copy manually.");
+      }
+    }
+
+    // -------------------------
+    // The actual simplifier prompt (engineer brief)
+    // -------------------------
+    function buildSystemPromptForEngineerBrief() {
+      return (
+        "You are rewriting an AV job/event description for an engineer who will read it quickly on their phone.\n\n" +
+        "GOAL:\n" +
+        "- Produce a clean, practical engineer brief.\n" +
+        "- Remove fluff, sales wording, and vague phrases (e.g. 'positioned as discussed').\n" +
+        "- Keep installation-critical facts: WHAT is being supplied/installed, WHERE it goes, WHEN, access constraints, power/network notes, and any specific instructions.\n\n" +
+        "KEEP / EMPHASISE:\n" +
+        "- Any location/placement instruction MUST be kept and MUST be in **bold**.\n" +
+        "- Keep mic TYPE requirements (handheld vs beltpack/lapel vs headset vs gooseneck) and quantities.\n" +
+        "- Do NOT include brand-option lists (e.g. 'Toa/Trantec/Audio Technica') unless the text specifies a single exact model that matters.\n" +
+        "- Keep prices ONLY if they are explicitly present.\n\n" +
+        "ISSUES SECTION:\n" +
+        "- If the input mentions faults/problems/unknowns/risks (e.g. hiss, cable cut, old amp, needs test), create a dedicated section:\n" +
+        "  **Noted issues / risks**\n" +
+        "  with bullet points.\n" +
+        "- If no issues are mentioned, do NOT add the section.\n\n" +
+        "FORMAT:\n" +
+        "- Output MUST be simple Markdown that renders well to rich text:\n" +
+        "  - Use **bold** for headings and for location/placement lines.\n" +
+        "  - Use short bullet lists.\n" +
+        "  - Avoid deep nesting (max one level).\n" +
+        "- Do not use '#', '##' headings.\n" +
+        "- Do not include 'Summary:' or similar labels.\n\n" +
+        "NO INVENTION:\n" +
+        "- Do not invent details not clearly present.\n" +
+        "- Do not guess brands.\n"
+      );
+    }
+
     async function simplifyDescription() {
       const title = (document.getElementById("originalTitle").value || "").trim();
       const text  = (document.getElementById("originalText").value || "").trim();
@@ -972,44 +1142,18 @@
       setAiStatus("Talking to OpenAI…", false);
 
       try {
-        const systemPrompt =
-          "You are simplifying an AV job/event description for an engineer who will read it quickly on their phone.\n\n" +
-          "GOAL:\n" +
-          "- Rewrite the description so it is shorter, clearer and easier to scan.\n" +
-          "- KEEP all important factual details: locations, building names, dates/times, key constraints, key people,\n" +
-          "  kit names/models, access instructions, and any join links.\n" +
-          "- Remove waffle and repetition.\n\n" +
-          "Rules:\n" +
-          "- Do NOT invent anything that is not clearly present in the original text.\n" +
-          "- Do NOT drop important instructions just because they sound boring.\n" +
-          "- It’s fine to reorder information to improve clarity.\n" +
-          "- Output should be suitable for dropping straight into the calendar description.\n\n" +
-          "Output:\n" +
-          "- Short paragraphs and/or bullet points.\n" +
-          "- No headings like 'Summary:' – just the cleaned-up text.";
-
+        const systemPrompt = buildSystemPromptForEngineerBrief();
         const result = await callOpenAIWithFallback(systemPrompt, combined);
 
-        document.getElementById("simplifiedText").value = result.text;
+        // Store raw + render to rich
+        setRichFromMarkdown(result.text);
+
         setAiStatus("Simplified description ready (" + result.modelUsed + ").", false);
       } catch (e) {
         debugLog("Simplify error", { error: e.message || String(e) });
         setAiStatus(e.message || "Error simplifying description.", true);
       } finally {
         document.getElementById("simplifyBtn").disabled = false;
-      }
-    }
-
-    async function copySimplified() {
-      const txt = (document.getElementById("simplifiedText").value || "").trim();
-      if (!txt) { alert("No simplified text to copy yet."); return; }
-      try {
-        await navigator.clipboard.writeText(txt);
-        alert("Simplified text copied to clipboard.");
-        debugLog("Simplified text copied to clipboard.");
-      } catch (e) {
-        debugLog("Clipboard copy failed", { error: e.message || String(e) });
-        alert("Could not copy automatically. You may need to select and copy manually.");
       }
     }
 
@@ -1083,7 +1227,7 @@
     // -------------------------
     // INIT
     // -------------------------
-    window.addEventListener("DOMContentLoaded", () => {
+    window.addEventListener("DOMContentLoaded", async () => {
       // version pill text
       const versionBtn = document.getElementById("copyVersionBtn");
       if (versionBtn) versionBtn.textContent = TOOL_VERSION;
@@ -1097,7 +1241,8 @@
       // Bind buttons
       document.getElementById("signinBtn").addEventListener("click", signInManual);
       document.getElementById("simplifyBtn").addEventListener("click", simplifyDescription);
-      document.getElementById("copyBtn").addEventListener("click", copySimplified);
+      document.getElementById("copyBtn").addEventListener("click", copyRichFinal);
+      document.getElementById("copyPlainBtn").addEventListener("click", copyPlainFinal);
       document.getElementById("copyVersionBtn").addEventListener("click", copyFullPageHtml);
 
       // Event selection -> fetch full payload via event.get
@@ -1121,11 +1266,19 @@
       loadStoredApiKey();
       setDefaultDateRangeInputs();
 
-      // Initialise auth on next tick (keeps button working even if gsi loads slightly later)
-      setTimeout(() => {
-        try { initAuth(); }
-        catch (e) { debugLog("initAuth threw", { error: e.message || String(e) }); }
-      }, 0);
+      // Marked/DOMPurify presence check
+      const markedOk = ensureMarkedConfig();
+      const purifyOk = !!window.DOMPurify;
+      if (markedOk && purifyOk) setMdStatus("Markdown renderer ready (marked + DOMPurify).", false);
+      else if (markedOk && !purifyOk) setMdStatus("Marked loaded, DOMPurify missing (sanitise disabled).", true);
+      else setMdStatus("Markdown renderer not loaded yet. (Should load within a second.)", true);
+
+      // Kick auth init in a robust way (does not break the button if GIS loads late)
+      const authReady = await ensureAuthReadyWithRetry({ maxMs: 6000, intervalMs: 150 });
+      if (!authReady) {
+        debugLog("Google OAuth not ready after retry window.");
+        // Do not hard error; button will also retry.
+      }
     });
   </script>
 </body>
