@@ -1,0 +1,1934 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Consultation Meeting Processor</title>
+  <meta name="color-scheme" content="light dark" />
+  <!-- Google OAuth client ID (same as other tools) -->
+  <meta name="google-oauth-client-id"
+        content="105230737516-l8tlnck4idde83pjetrotobpt8borvts.apps.googleusercontent.com" />
+  <!-- SheetJS for Excel reading/writing – primary CDN -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    :root {
+      --bg:#0f172a; --card:#020617; --panel:#020617; --border:#1e293b;
+      --text:#e5e7eb; --muted:#94a3b8; --accent:#38bdf8; --accent-soft:rgba(56,189,248,0.12);
+      --danger:#ef4444;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg:#f8fafc; --card:#ffffff; --panel:#ffffff; --border:#e5e7eb;
+        --text:#020617; --muted:#475569; --accent:#0ea5e9; --accent-soft:rgba(14,165,233,0.10);
+        --danger:#b91c1c;
+      }
+    }
+    * { box-sizing:border-box; }
+    html, body { height:100%; }
+    body {
+      margin:0;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(900px 600px at 5% 0%, rgba(56,189,248,0.10), transparent 55%),
+        radial-gradient(800px 600px at 95% 0%, rgba(129,140,248,0.12), transparent 50%),
+        var(--bg);
+      color:var(--text);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin:0 auto;
+      padding:18px;
+    }
+    .card {
+      background:var(--card);
+      border-radius:20px;
+      border:1px solid var(--border);
+      padding:18px 18px 22px;
+      box-shadow:0 18px 40px rgba(15,23,42,0.45);
+      margin-bottom:16px;
+    }
+    h1 {
+      margin:0 0 4px;
+      font-size:26px;
+      letter-spacing:.02em;
+      display:flex;
+      align-items:baseline;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .version {
+      font-size:11px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+    }
+    .muted { color:var(--muted); font-size:14px; }
+    .pill {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:11px;
+      padding:3px 9px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+      text-decoration:none;
+      cursor:pointer;
+    }
+    .pill:hover {
+      border-color:var(--accent);
+      color:var(--accent);
+      background:var(--accent-soft);
+    }
+    .section {
+      margin-top:14px;
+      padding:12px;
+      border-radius:12px;
+      background:rgba(15,23,42,0.65);
+      border:1px dashed var(--border);
+    }
+    @media (prefers-color-scheme: light) {
+      .section { background:#f9fafb; }
+    }
+    .section-title {
+      font-size:13px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+    label {
+      font-size:13px;
+      font-weight:600;
+      margin-bottom:4px;
+      display:block;
+    }
+    input, select, textarea {
+      width:100%;
+      font-size:14px;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--panel);
+      color:var(--text);
+    }
+    textarea { resize:vertical; min-height:70px; }
+    input::placeholder, textarea::placeholder { color:var(--muted); }
+    .small-note { font-size:11px;color:var(--muted);margin-top:3px; }
+
+    .grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap:10px;
+    }
+
+    .btn-row { display:flex;flex-wrap:wrap;gap:8px;margin-top:8px; }
+    button {
+      border-radius:999px;
+      border:1px solid var(--border);
+      padding:8px 13px;
+      font-size:14px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      background:var(--panel);
+      color:var(--text);
+      cursor:pointer;
+      transition:transform .06s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+    }
+    button.primary {
+      border-color:var(--accent);
+      background:linear-gradient(180deg,var(--accent-soft),transparent);
+    }
+    button:hover {
+      transform:translateY(-1px);
+      box-shadow:0 4px 12px rgba(15,23,42,0.5);
+    }
+
+    #status, #aiStatus {
+      font-size:12px;color:var(--muted);margin-top:4px;
+    }
+    .danger { color:var(--danger); }
+
+    details.transcript summary {
+      cursor:pointer;
+      font-size:13px;
+      color:var(--muted);
+      margin-bottom:4px;
+    }
+    .transcript-body {
+      max-height:260px;
+      overflow:auto;
+      font-size:13px;
+      line-height:1.5;
+      border-radius:10px;
+      border:1px solid var(--border);
+      padding:8px;
+      background:var(--panel);
+      white-space:pre-wrap;
+    }
+
+    .summary-box {
+      padding:8px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--panel);
+      font-size:13px;
+      line-height:1.5;
+      max-height:260px;
+      overflow:auto;
+    }
+    .summary-box h2 {
+      font-size:13px;
+      margin:0 0 4px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      color:var(--muted);
+    }
+    ul { margin:4px 0 6px 18px;padding:0;font-size:13px; }
+    li { margin-bottom:2px; }
+
+    table {
+      width:100%;
+      border-collapse:collapse;
+      font-size:12px;
+    }
+    th, td {
+      border:1px solid var(--border);
+      padding:4px 6px;
+      vertical-align:top;
+    }
+    th {
+      background:rgba(15,23,42,0.6);
+      font-weight:600;
+    }
+    @media (prefers-color-scheme: light) {
+      th { background:#e5e7eb; }
+    }
+
+    #productsTableWrapper, #proposalPreview {
+      max-height:280px;
+      overflow:auto;
+      border-radius:10px;
+      border:1px solid var(--border);
+      padding:8px;
+      background:var(--panel);
+      font-size:13px;
+      white-space:pre-wrap;
+    }
+
+    details.debug {
+      margin-top:10px;
+      border-radius:12px;
+      border:1px dashed var(--border);
+      padding:8px 10px;
+      background:rgba(15,23,42,0.4);
+      font-size:11px;
+    }
+    @media (prefers-color-scheme: light) {
+      details.debug { background:#f3f4f6; }
+    }
+    details.debug summary {
+      cursor:pointer;
+      font-size:12px;
+      color:var(--muted);
+    }
+    details.debug pre {
+      white-space:pre-wrap;
+      font-size:11px;
+      margin-top:4px;
+    }
+
+    details.api {
+      margin-top:10px;
+      border-radius:12px;
+      border:1px dashed var(--border);
+      padding:6px 10px 10px;
+      background:rgba(15,23,42,0.4);
+      font-size:11px;
+    }
+    @media (prefers-color-scheme: light) {
+      details.api { background:#f3f4f6; }
+    }
+    details.api summary {
+      cursor:pointer;
+      font-size:12px;
+      color:var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+        <div>
+          <h1>
+            Consultation Meeting Processor
+            <span class="version">v0.10</span>
+          </h1>
+          <div class="muted">
+            Pick a consultation event, upload the audio or a text transcript, get a transcript, structured summary,
+            suggested kit from your spreadsheet template, and a proposal draft.
+          </div>
+        </div>
+        <a href="https://frazerboorman.github.io/" class="pill">Frazer · AVD TOOLS</a>
+      </div>
+
+      <!-- STEP 1 – Calendar event -->
+      <div class="section">
+        <div class="section-title">Step 1 – Select consultation from Google Calendar</div>
+        <div class="grid">
+          <div>
+            <label for="eventSelect">Recent events (last 14 days + today)</label>
+            <select id="eventSelect">
+              <option value="">Sign in to load events…</option>
+            </select>
+            <div id="status">Status: Waiting for sign-in…</div>
+            <div id="aiStatus"></div>
+          </div>
+          <div style="align-self:end;">
+            <button id="signinBtn" class="primary" type="button">Sign into Google</button>
+            <div class="small-note">
+              Same OAuth flow as the other tools.
+            </div>
+          </div>
+        </div>
+
+        <!-- Hidden date selection panel (advanced) -->
+        <details class="debug" style="margin-top:8px;">
+          <summary>Advanced date range (override last 14 days)</summary>
+          <div class="small-note" style="margin-top:4px;">
+            By default the tool loads events from the last 14 days plus today. Override the date range here if needed.
+          </div>
+          <div class="grid" style="margin-top:6px;max-width:520px;">
+            <div>
+              <label for="startDateInput">Start date</label>
+              <input id="startDateInput" type="date" />
+            </div>
+            <div>
+              <label for="endDateInput">End date</label>
+              <input id="endDateInput" type="date" />
+            </div>
+          </div>
+          <div class="btn-row" style="margin-top:6px;">
+            <button type="button" id="applyDateRangeBtn">Apply date range</button>
+            <button type="button" id="clearDateRangeBtn">Clear override</button>
+          </div>
+          <div class="small-note">
+            Both dates required. Clear override to return to the automatic last-14-days window.
+          </div>
+        </details>
+      </div>
+
+      <!-- STEP 2 – Audio upload + processing -->
+      <div class="section">
+        <div class="section-title">Step 2 – Upload consultation audio &amp; process</div>
+        <div class="grid">
+          <div>
+            <label for="audioFile">Consultation audio / text file</label>
+            <input id="audioFile" type="file" accept="audio/*,text/plain" />
+            <div class="small-note">
+              Export from DJI Mic / Voice Memos first, or upload a .txt transcript. File only goes to OpenAI when transcribing.
+              Whisper supports files up to ~25 MB per request; larger recordings will be split into chunks automatically.
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="processBtn" class="primary" type="button">Process meeting (transcribe + summarise)</button>
+        </div>
+        <div class="small-note">
+          Uses your OpenAI key stored in this browser (see “API key” panel below).
+        </div>
+
+        <div style="margin-top:10px;" class="grid">
+          <div>
+            <details class="transcript" id="transcriptDetails">
+              <summary>Show full transcript</summary>
+              <div class="transcript-body" id="transcriptBox">No transcript yet.</div>
+            </details>
+          </div>
+          <div>
+            <div class="summary-box">
+              <h2>Consultation summary</h2>
+              <div id="summaryBox">No summary yet.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid" style="margin-top:10px;">
+          <div class="summary-box">
+            <h2>Key issues</h2>
+            <div id="issuesBox">–</div>
+          </div>
+          <div class="summary-box">
+            <h2>Current equipment</h2>
+            <div id="equipmentBox">–</div>
+          </div>
+        </div>
+
+        <div class="summary-box" style="margin-top:10px;">
+          <h2>Agreed / preferred solution</h2>
+          <div id="solutionBox">–</div>
+        </div>
+
+        <details class="debug" style="margin-top:8px;">
+          <summary>Debug view (structured AI JSON from transcript)</summary>
+          <pre id="debugJson"></pre>
+        </details>
+      </div>
+
+      <!-- STEP 3 – Spreadsheet template / product suggestions -->
+      <div class="section">
+        <div class="section-title">Step 3 – Populate your spreadsheet template (Guided + Products → Checklists)</div>
+        <div class="grid">
+          <div>
+            <label for="templateFile">Upload template spreadsheet</label>
+            <input id="templateFile" type="file" accept=".xlsx,.xlsm,.xls" />
+            <div class="small-note">
+              The tool reads:
+              <strong>Products</strong> (A3:H500 headers on row 3, data rows A4:H500) and
+              <strong>Guided</strong> (frequent kit),
+              then writes the chosen <strong>Product</strong> (col C) and <strong>Qty</strong> (col G) into the existing
+              <strong>Checklists</strong> sheet (and uses <strong>MISC</strong> from row 278 for anything not in your Products list).
+              It does <strong>not</strong> overwrite formula columns.
+            </div>
+            <div id="productsDetectStatus" class="small-note" style="margin-top:6px;"></div>
+          </div>
+          <div>
+            <label style="display:flex;gap:8px;align-items:center;cursor:pointer;">
+              <input type="checkbox" id="allowAIPricingLinks" />
+              Allow AI to suggest price/link for unlisted products (may be wrong)
+            </label>
+            <div class="small-note">
+              Default OFF (Be Strict). If OFF, unlisted items go into MISC with name + qty + justification, but price/link stay blank.
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="generateProductsBtn" type="button">Generate &amp; write into Checklists</button>
+          <button id="downloadFilledTemplateBtn" type="button">Download populated workbook</button>
+        </div>
+
+        <div class="small-note">
+          Category is guidance only — it must never block cross-category dependencies (e.g. routers for mixers).
+        </div>
+
+        <div style="margin-top:10px;">
+          <label>What will be written (preview)</label>
+          <div id="productsTableWrapper">No products suggested yet.</div>
+        </div>
+      </div>
+
+      <!-- STEP 4 – Proposal generator -->
+      <div class="section">
+        <div class="section-title">Step 4 – Proposal generator (from priced spreadsheet)</div>
+        <div class="grid">
+          <div>
+            <label for="pricedFile">Upload edited/priced spreadsheet</label>
+            <input id="pricedFile" type="file" accept=".xlsx,.xlsm,.xls" />
+            <div class="small-note">
+              Use the template you’ve filled with prices, labour, totals etc.
+              The tool will read the <strong>Checklists</strong> sheet if present, otherwise the first sheet.
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button id="generateProposalBtn" type="button" class="primary">Generate proposal / quote</button>
+          <button id="downloadProposalDocBtn" type="button">Download proposal as Word (.doc)</button>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label>Proposal preview</label>
+          <div id="proposalPreview">No proposal generated yet.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API KEY PANEL -->
+    <details class="api">
+      <summary>API key (OpenAI) – hidden by default</summary>
+      <div class="small-note" style="margin-top:4px;">
+        Stored locally in <code>localStorage['avd_job_report_openai_key']</code>. Never sent anywhere except OpenAI’s API.
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap;">
+        <input id="apiKeyInput" type="password" placeholder="sk-..." style="flex:1 1 220px;max-width:380px;">
+        <button type="button" id="saveApiKeyBtn">Save</button>
+        <button type="button" id="clearApiKeyBtn">Forget</button>
+      </div>
+      <div id="apiKeyStatus" class="small-note"></div>
+    </details>
+
+    <!-- Global debug panel -->
+    <details class="debug">
+      <summary>Debug panel</summary>
+      <pre id="debugLog">(empty)</pre>
+    </details>
+
+    <!-- AI Debugger panel -->
+    <details class="debug">
+      <summary>AI Debugger (Be Strict)</summary>
+      <div class="small-note" style="margin-top:4px;">
+        Sends the full current index.html, internal debug log, structured AI JSON, captured browser errors, and captured console output to the 5.1 model.
+        Use the box below to describe what you think isn’t working (and optionally paste extra console output).
+      </div>
+      <div style="margin-top:6px;">
+        <button type="button" id="runAiDebuggerBtn">Run AI Debugger (index + logs)</button>
+      </div>
+      <div class="small-note" style="margin-top:6px;">
+        Problem description (what you expected vs what happened) + optional pasted console:
+      </div>
+      <textarea id="consoleErrorsInput" rows="5" style="margin-top:4px;" placeholder="Example: 'Step 3 says 0 products detected, but Products has 400 rows…'"></textarea>
+      <div class="small-note" style="margin-top:6px;">
+        AI Debugger output (summary, reasons, and outline of changes):
+      </div>
+      <pre id="aiDebuggerOutput"></pre>
+    </details>
+
+    <!-- Replacement Index panel -->
+    <details class="debug">
+      <summary>Replacement index (from AI Debugger)</summary>
+      <div class="small-note" style="margin-top:4px;">
+        If the AI Debugger can fix the problem in code, it will provide a complete replacement index.html here.
+        If the issue is external, this area will contain a prompt you can paste into ChatGPT for deeper help.
+      </div>
+      <pre id="replacementIndexOutput">(none yet)</pre>
+    </details>
+
+    <!-- Calendar / advanced settings -->
+    <details class="debug">
+      <summary>Calendar / advanced (Calendar ID)</summary>
+      <div class="small-note" style="margin-top:4px;">
+        Usually this is your shared AVD consultations calendar. Same one you use in the other tools.
+      </div>
+      <div style="margin-top:6px;max-width:480px;">
+        <label for="calendarId">Calendar ID</label>
+        <input id="calendarId"
+          value="bb14db72acb2ffd4230316960d02103fa66e54901522ff7b8113eec682f6d42e@group.calendar.google.com" />
+        <div class="small-note">
+          Change only if you know what you’re doing. The tool will use this for loading recent events.
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <script>
+    // =========================
+    // CONFIG / SHARED CONSTANTS
+    // =========================
+    const CLIENT_ID = "105230737516-l8tlnck4idde83pjetrotobpt8borvts.apps.googleusercontent.com";
+    const SCOPES   = "https://www.googleapis.com/auth/calendar.readonly";
+    const OPENAI_KEY_STORAGE = "avd_job_report_openai_key";
+    const TEXT_MODEL = "gpt-4.1-mini";
+    const AUDIO_MODEL = "whisper-1";
+    const DEBUG_MODEL = "gpt-5.1";
+
+    // Spreadsheet assumptions (Be Strict: match your actual workbook)
+    const PRODUCTS_SHEET_NAME = "Products";
+    const GUIDED_SHEET_NAME = "Guided";
+    const CHECKLISTS_SHEET_NAME = "Checklists";
+
+    // Products layout: headers on row 3, data rows 4..500, columns A..H
+    const PRODUCTS_HEADER_ROW_1BASED = 3;
+    const PRODUCTS_DATA_START_ROW_1BASED = 4;
+    const PRODUCTS_DATA_END_ROW_1BASED = 500;
+    const PRODUCTS_COL_START = 1; // A
+    const PRODUCTS_COL_END = 8;   // H
+
+    // Checklists layout: Product in col C, Qty in col G
+    const CHECKLISTS_PRODUCT_COL_1BASED = 3; // C
+    const CHECKLISTS_QTY_COL_1BASED = 7;     // G
+    const CHECKLISTS_LINK_COL_1BASED = 10;   // J
+    const CHECKLISTS_NOTES_COL_1BASED = 11;  // K
+
+    // MISC starts at row 278 (headers at 277)
+    const MISC_HEADER_ROW_1BASED = 277;
+    const MISC_DATA_START_ROW_1BASED = 278;
+
+    let tokenClient = null;
+    let accessToken = null;
+    let currentEvents = [];
+    let lastTranscript = "";
+    let lastStructuredSummary = null;
+    let lastProductSelection = null; // { workbook, selection, writePlan }
+    let lastProposalText = "";
+    let browserErrorLog = [];
+    let consoleLogCapture = [];
+    let customDateRange = { start: null, end: null }; // optional override for event date window
+
+    // ===================
+    // SMALL UTIL HELPERS
+    // ===================
+    function truncateTail(str, maxChars) {
+      const s = String(str || "");
+      if (!maxChars || maxChars <= 0) return "";
+      if (s.length <= maxChars) return s;
+      return "…(truncated; showing last " + maxChars + " chars)\n" + s.slice(-maxChars);
+    }
+
+    function capArray(arr, maxItems) {
+      if (!Array.isArray(arr)) return [];
+      if (!maxItems || maxItems <= 0) return [];
+      if (arr.length <= maxItems) return arr.slice();
+      return arr.slice(arr.length - maxItems);
+    }
+
+    function asText(v) {
+      if (v == null) return "";
+      return String(v).trim();
+    }
+
+    function safeNumber(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    // ==============
+    // DEBUG LOGGER
+    // ==============
+    function logDebug(msg) {
+      try {
+        const el = document.getElementById("debugLog");
+        if (!el) return;
+        const ts = new Date().toISOString().replace("T"," ").slice(0,19);
+        el.textContent += "[" + ts + "] " + msg + "\n";
+        el.scrollTop = el.scrollHeight;
+      } catch (e) {
+        if (console && console.warn) console.warn("debugLog error", e);
+      }
+    }
+
+    // ==============
+    // STATUS HELPERS
+    // ==============
+    function setStatus(msg, isError) {
+      const el = document.getElementById("status");
+      if (!el) return;
+      el.textContent = "Status: " + msg;
+      el.className = isError ? "danger" : "";
+      logDebug("STATUS: " + msg);
+    }
+
+    function setAiStatus(msg, isError) {
+      const el = document.getElementById("aiStatus");
+      if (!el) return;
+      el.textContent = msg || "";
+      el.className = isError ? "danger" : "";
+      if (msg) logDebug("AI: " + msg);
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;");
+    }
+
+    // ======================
+    // GOOGLE AUTH & CALENDAR
+    // ======================
+    function getEventStartDate(ev) {
+      if (!ev || !ev.start) return null;
+      if (ev.start.date) return new Date(ev.start.date + "T00:00:00Z");
+      if (ev.start.dateTime) return new Date(ev.start.dateTime);
+      return null;
+    }
+    function extractEventDate(ev) {
+      if (!ev || !ev.start) return "";
+      if (ev.start.date) return ev.start.date;
+      if (ev.start.dateTime) return ev.start.dateTime.slice(0,10);
+      return "";
+    }
+
+    function initAuth() {
+      if (!window.google || !google.accounts || !google.accounts.oauth2) {
+        logDebug("Google auth library not ready yet.");
+        return;
+      }
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        prompt: "",
+        callback: (resp) => {
+          if (resp && resp.access_token) {
+            accessToken = resp.access_token;
+            setStatus("Signed in. Loading events…", false);
+            loadRecentEvents();
+          } else {
+            setStatus("Sign-in failed.", true);
+          }
+        }
+      });
+      logDebug("Google tokenClient initialised.");
+    }
+
+    function signInManual() {
+      if (!tokenClient) initAuth();
+      if (!tokenClient) {
+        setStatus("Google auth not ready.", true);
+        return;
+      }
+      logDebug("Requesting Google access token…");
+      tokenClient.requestAccessToken();
+    }
+
+    async function loadRecentEvents() {
+      if (!accessToken) {
+        setStatus("No access token yet.", true);
+        return;
+      }
+      const calId = (document.getElementById("calendarId").value || "primary").trim();
+
+      const now = new Date();
+      let start;
+      let end;
+
+      const usingCustomRange = !!(customDateRange.start && customDateRange.end);
+
+      if (usingCustomRange) {
+        start = new Date(customDateRange.start);
+        start.setHours(0,0,0,0);
+        end = new Date(customDateRange.end);
+        end.setHours(23,59,59,999);
+        logDebug("Using custom date range: " + start.toISOString().slice(0,10) + " to " + end.toISOString().slice(0,10));
+      } else {
+        end = new Date(now);
+        end.setHours(23,59,59,999);
+        start = new Date(now);
+        start.setDate(start.getDate() - 14);
+        start.setHours(0,0,0,0);
+        logDebug("Using default date range: last 14 days + today.");
+      }
+
+      const url = new URL(
+        "https://www.googleapis.com/calendar/v3/calendars/" +
+        encodeURIComponent(calId) +
+        "/events"
+      );
+      url.searchParams.set("singleEvents","true");
+      url.searchParams.set("orderBy","startTime");
+      url.searchParams.set("timeMin", start.toISOString());
+      url.searchParams.set("timeMax", end.toISOString());
+      url.searchParams.set("maxResults","250");
+
+      logDebug("Fetching events: " + url.toString());
+
+      const res = await fetch(url.toString(), {
+        headers: { "Authorization":"Bearer " + accessToken }
+      });
+      if (!res.ok) {
+        setStatus("Calendar API error " + res.status, true);
+        return;
+      }
+      const data = await res.json();
+      const items = data.items || [];
+      const nowRef = new Date();
+
+      let processed = items
+        .map(ev => ({ ev, startDate: getEventStartDate(ev) }))
+        .filter(obj => obj.startDate);
+
+      // IMPORTANT:
+      // - Default mode is "past + today": keep filtering out future events
+      // - Custom date range must allow future events (do NOT apply <= now filter)
+      if (!usingCustomRange) {
+        processed = processed.filter(obj => obj.startDate <= nowRef);
+        processed.sort((a,b) => b.startDate - a.startDate);
+      } else {
+        processed.sort((a,b) => a.startDate - b.startDate);
+      }
+
+      currentEvents = processed.map(x => x.ev);
+
+      const sel = document.getElementById("eventSelect");
+      sel.innerHTML = "";
+      if (!currentEvents.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No events in selected window.";
+        sel.appendChild(opt);
+        setStatus("No events found for this date range.", false);
+        return;
+      }
+
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "— Select consultation —";
+      sel.appendChild(placeholder);
+
+      currentEvents.forEach((ev, idx) => {
+        const title = ev.summary || "(no title)";
+        const d = extractEventDate(ev);
+        const opt = document.createElement("option");
+        opt.value = String(idx);
+        opt.textContent = (d ? (d + " – ") : "") + title;
+        sel.appendChild(opt);
+      });
+
+      setStatus("Loaded " + currentEvents.length + " events.", false);
+      logDebug("Loaded " + currentEvents.length + " events.");
+    }
+
+    // ===================
+    // OPENAI: AUDIO + NLP
+    // ===================
+    function getOpenAIKeyOrThrow() {
+      const key = localStorage.getItem(OPENAI_KEY_STORAGE);
+      if (!key) {
+        throw new Error("No OpenAI API key found. Set it in the API key panel.");
+      }
+      return key;
+    }
+
+    async function transcribeAudioChunk(blob, apiKey, partIndex, totalParts) {
+      const formData = new FormData();
+      formData.append("file", blob, "chunk-" + partIndex + ".mp3");
+      formData.append("model", AUDIO_MODEL);
+      formData.append("response_format","json");
+      formData.append("language","en"); // force English transcription
+
+      logDebug("Sending audio chunk " + partIndex + "/" + totalParts + " to OpenAI whisper…");
+
+      const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + apiKey
+        },
+        body: formData
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error("Audio transcription error (chunk " + partIndex + "/" + totalParts + ") " + res.status + ": " + txt);
+      }
+      const data = await res.json();
+      return data.text || "";
+    }
+
+    async function transcribeAudio(file) {
+      const apiKey = getOpenAIKeyOrThrow();
+
+      // Text file path
+      if (file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt")) {
+        logDebug("Treating file as plain text transcript: " + file.name);
+        const text = await file.text();
+        return text || "";
+      }
+
+      const MAX_CHUNK_BYTES = 24 * 1024 * 1024; // Keep under 25 MB limit per request
+
+      if (file.size <= MAX_CHUNK_BYTES) {
+        logDebug("Audio file size " + (file.size / (1024 * 1024)).toFixed(1) + " MB – single Whisper call.");
+        return await transcribeAudioChunk(file, apiKey, 1, 1);
+      }
+
+      const totalParts = Math.ceil(file.size / MAX_CHUNK_BYTES);
+      logDebug(
+        "Audio file size " +
+        (file.size / (1024 * 1024)).toFixed(1) +
+        " MB – splitting into " + totalParts + " chunks for Whisper."
+      );
+      setAiStatus("Large audio – uploading in chunks for transcription…", false);
+
+      let combinedText = "";
+      for (let part = 0; part < totalParts; part++) {
+        const start = part * MAX_CHUNK_BYTES;
+        const end = Math.min(file.size, start + MAX_CHUNK_BYTES);
+        const chunk = file.slice(start, end);
+        const partIndex = part + 1;
+        logDebug("Preparing chunk " + partIndex + "/" + totalParts + " (" +
+          ((end - start) / (1024 * 1024)).toFixed(1) + " MB).");
+        const chunkText = await transcribeAudioChunk(chunk, apiKey, partIndex, totalParts);
+        if (chunkText) {
+          combinedText += (combinedText ? "\n\n" : "") + chunkText;
+        }
+      }
+      return combinedText;
+    }
+
+    async function summariseTranscript(transcript, eventMeta) {
+      const apiKey = getOpenAIKeyOrThrow();
+      const systemPrompt =
+        "You are processing a recorded AV consultation meeting between an engineer and client.\n" +
+        "You receive the full transcript as plain text and some optional calendar event metadata.\n\n" +
+        "GOALS:\n" +
+        "1) Produce a concise consultation summary for the engineer, not the client.\n" +
+        "2) Identify key issues the client is facing (bullet points).\n" +
+        "3) Identify current equipment and, where stated, whether it works, is failing, or is unknown.\n" +
+        "4) Identify the final agreed / preferred solution, not just options that were discussed and rejected.\n" +
+        "5) Produce a 'productNeeds' list the system can use later to pick products from a spreadsheet.\n\n" +
+        "Rules:\n" +
+        "- Read the ENTIRE transcript before deciding what was actually agreed.\n" +
+        "- If something was clearly rejected, do NOT list it as part of the final solution.\n" +
+        "- Do NOT invent any kit or decisions that are not in the transcript.\n" +
+        "- productNeeds items should be high-level roles like 'ceiling speakers for main hall', '4K projector',\n" +
+        "  'HDMI wall plate', 'wireless handheld microphone', etc.\n\n" +
+        "Return STRICT JSON ONLY in this format:\n" +
+        "{\n" +
+        '  \"summary\": \"Short paragraph summarising the meeting from the engineer’s perspective.\",\n' +
+        '  \"keyIssues\": [\"issue 1\", \"issue 2\", \"...\"],\n' +
+        '  \"currentEquipment\": [\n' +
+        '    { \"name\": \"\", \"status\": \"working | failing | unknown\", \"notes\": \"\" }\n' +
+        '  ],\n' +
+        '  \"agreedSolution\": \"Paragraph describing final agreed solution.\",\n' +
+        '  \"productNeeds\": [\n' +
+        '    {\n' +
+        '      \"categoryHint\": \"Audio | Visual | Control | Streaming | Infrastructure | Other\",\n' +
+        '      \"role\": \"e.g. ceiling speakers, projector, wall plate, amp, etc.\",\n' +
+        '      \"quantity\": 0,\n' +
+        '      \"extraNotes\": \"any constraints mentioned (e.g. white finish, left wall, balcony, etc.)\"\n' +
+        '    }\n' +
+        '  ]\n' +
+        "}\n" +
+        "No explanatory text outside the JSON.";
+
+      const payload = { transcript, eventMeta };
+
+      logDebug("Sending transcript to OpenAI for structured summary…");
+
+      const res = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Content-Type":"application/json",
+          "Authorization":"Bearer " + apiKey
+        },
+        body: JSON.stringify({
+          model: TEXT_MODEL,
+          input: [
+            { role:"system", content: systemPrompt },
+            { role:"user", content: JSON.stringify(payload) }
+          ]
+        })
+      });
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error("Summary AI error " + res.status + ": " + txt);
+      }
+      const data = await res.json();
+      let rawText = "";
+      if (
+        data.output &&
+        data.output[0] &&
+        data.output[0].content &&
+        data.output[0].content[0] &&
+        data.output[0].content[0].text
+      ) {
+        rawText = data.output[0].content[0].text;
+      } else {
+        throw new Error("Unexpected AI summary response shape.");
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch (e) {
+        console.error("Failed to parse AI JSON:", rawText);
+        throw new Error("Failed to parse AI JSON summary.");
+      }
+      logDebug("Structured summary parsed.");
+      return parsed;
+    }
+
+    async function handleProcessMeeting() {
+      const fileInput = document.getElementById("audioFile");
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        setAiStatus("Please choose an audio or text file first.", true);
+        return;
+      }
+
+      document.getElementById("processBtn").disabled = true;
+      setAiStatus("Uploading and transcribing / reading…", false);
+      logDebug("Processing file: " + file.name + " (" + file.type + ", " + file.size + " bytes)");
+
+      try {
+        const eventSel = document.getElementById("eventSelect");
+        let eventMeta = null;
+        if (eventSel.value) {
+          const ev = currentEvents[Number(eventSel.value)];
+          if (ev) {
+            eventMeta = {
+              title: ev.summary || "",
+              description: ev.description || "",
+              location: ev.location || "",
+              start: ev.start || {}
+            };
+          }
+        }
+
+        const transcript = await transcribeAudio(file);
+        lastTranscript = transcript || "";
+
+        document.getElementById("transcriptBox").textContent =
+          transcript ? transcript : "Transcription / text returned empty.";
+
+        setAiStatus("Transcribed / loaded. Summarising and structuring…", false);
+
+        const structured = await summariseTranscript(transcript, eventMeta);
+        lastStructuredSummary = structured;
+
+        // Render into UI
+        document.getElementById("summaryBox").innerHTML =
+          structured.summary
+            ? escapeHtml(structured.summary).replace(/\n/g,"<br>")
+            : "No summary returned.";
+
+        if (Array.isArray(structured.keyIssues) && structured.keyIssues.length) {
+          document.getElementById("issuesBox").innerHTML =
+            "<ul>" + structured.keyIssues
+              .map(i => "<li>" + escapeHtml(i) + "</li>")
+              .join("") + "</ul>";
+        } else {
+          document.getElementById("issuesBox").textContent = "No key issues extracted.";
+        }
+
+        if (Array.isArray(structured.currentEquipment) && structured.currentEquipment.length) {
+          const lis = structured.currentEquipment.map(eq => {
+            const name = eq.name || "-";
+            const status = eq.status || "unknown";
+            const notes = eq.notes || "";
+            let line = "<strong>" + escapeHtml(name) + "</strong> (" + escapeHtml(status) + ")";
+            if (notes) line += " – " + escapeHtml(notes);
+            return "<li>" + line + "</li>";
+          }).join("");
+          document.getElementById("equipmentBox").innerHTML = "<ul>" + lis + "</ul>";
+        } else {
+          document.getElementById("equipmentBox").textContent = "No equipment explicitly mentioned.";
+        }
+
+        document.getElementById("solutionBox").innerHTML =
+          structured.agreedSolution
+            ? escapeHtml(structured.agreedSolution).replace(/\n/g,"<br>")
+            : "No final solution clearly extracted.";
+
+        document.getElementById("debugJson").textContent =
+          JSON.stringify(structured, null, 2);
+
+        setAiStatus("Transcript and summary ready. Review summary before product selection.", false);
+      } catch (e) {
+        console.error(e);
+        setAiStatus(e.message || "Error processing meeting.", true);
+      } finally {
+        document.getElementById("processBtn").disabled = false;
+      }
+    }
+
+    // ===========================
+    // STEP 3: PRODUCTS / TEMPLATE
+    // ===========================
+    function updateProductsDetectStatus(text, isError) {
+      const el = document.getElementById("productsDetectStatus");
+      if (!el) return;
+      el.textContent = text || "";
+      el.className = "small-note" + (isError ? " danger" : "");
+    }
+
+    function readProductsTableFixed(wb) {
+      const sheet = wb.Sheets[PRODUCTS_SHEET_NAME];
+      if (!sheet) throw new Error("No '" + PRODUCTS_SHEET_NAME + "' sheet found in template.");
+
+      // Read A3:H500 only (Be Strict: match your workbook)
+      const range = {
+        s: { r: PRODUCTS_HEADER_ROW_1BASED - 1, c: PRODUCTS_COL_START - 1 }, // A3
+        e: { r: PRODUCTS_DATA_END_ROW_1BASED - 1, c: PRODUCTS_COL_END - 1 }  // H500
+      };
+
+      const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, range });
+      if (!aoa || !aoa.length) throw new Error("Products range A3:H500 appears empty.");
+
+      const headers = aoa[0].map(h => asText(h));
+      const dataRows = aoa.slice(1); // corresponds to rows 4..500
+
+      const records = [];
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i] || [];
+        const productName = asText(row[0]); // column A in the range
+        const excelRowIndex = PRODUCTS_DATA_START_ROW_1BASED + i; // 4 + i
+        if (!productName) continue;
+
+        const obj = { rowIndex: excelRowIndex };
+        for (let c = 0; c < headers.length; c++) {
+          const key = headers[c] || ("COL" + (c + 1));
+          obj[key] = row[c];
+        }
+        records.push(obj);
+      }
+
+      return { headers, records, fixedRange: "Products!A3:H500 (data A4:H500)" };
+    }
+
+    function readGuidedKit(wb) {
+      const sheet = wb.Sheets[GUIDED_SHEET_NAME];
+      if (!sheet) return { available: false, items: [] };
+
+      // Guided is mostly a human-facing sheet; we just harvest a simple list of product strings as “frequent kit”.
+      // Find “Product” header and then capture column C under it in blocks.
+      const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      if (!aoa || !aoa.length) return { available: false, items: [] };
+
+      const items = [];
+      for (let r = 0; r < aoa.length; r++) {
+        const row = aoa[r] || [];
+        const maybeProduct = asText(row[2]); // column C
+        // Heuristic: guided product rows tend to be long-ish and not formula text
+        if (maybeProduct && maybeProduct.length > 3 && !maybeProduct.includes("VLOOKUP(")) {
+          items.push(maybeProduct);
+        }
+      }
+      // Deduplicate
+      const dedup = Array.from(new Set(items));
+      return { available: true, items: dedup.slice(0, 250) };
+    }
+
+    function findChecklistSections(ws) {
+      // Locate headings like "AUDIO CHECKLIST" etc in column B, and build ranges until next heading
+      const headings = [];
+      const MAX_SCAN = 2000;
+      for (let r = 1; r <= MAX_SCAN; r++) {
+        const v = ws["B" + r] ? ws["B" + r].v : null;
+        const s = asText(v);
+        if (s && s.toUpperCase().includes("CHECKLIST")) {
+          headings.push({ row: r, title: s });
+        }
+      }
+      // Ensure MISC known location, but also keep if found.
+      const sections = {};
+      for (let i = 0; i < headings.length; i++) {
+        const h = headings[i];
+        const next = headings[i + 1];
+        const startRow = h.row + 1; // data typically after header row
+        const endRow = (next ? (next.row - 1) : MAX_SCAN);
+        sections[h.title.toUpperCase()] = { headerRow: h.row, startRow, endRow, title: h.title };
+      }
+      // Add explicit misc, in case heading scan misses it
+      sections["MISC CHECKLIST"] = sections["MISC CHECKLIST"] || {
+        headerRow: MISC_HEADER_ROW_1BASED,
+        startRow: MISC_DATA_START_ROW_1BASED,
+        endRow: MAX_SCAN,
+        title: "MISC CHECKLIST"
+      };
+      return sections;
+    }
+
+    function firstEmptyRowInSection(ws, section, colLetter) {
+      const col = colLetter;
+      for (let r = section.startRow; r <= section.endRow; r++) {
+        const cell = ws[col + r];
+        const v = cell ? cell.v : null;
+        if (!asText(v)) return r;
+      }
+      return null;
+    }
+
+    function writeIntoChecklists(wb, selection) {
+      const ws = wb.Sheets[CHECKLISTS_SHEET_NAME];
+      if (!ws) throw new Error("No '" + CHECKLISTS_SHEET_NAME + "' sheet found in workbook.");
+
+      const sections = findChecklistSections(ws);
+
+      function resolveSectionName(checklist) {
+        const c = asText(checklist).toUpperCase();
+        // Map from your tool’s logical labels to sheet headings
+        if (c === "AUDIO") return "AUDIO CHECKLIST";
+        if (c === "VISUAL") return "VISUAL CHECKLIST";
+        if (c === "CONTROL") return "CONTROL CHECKLIST";
+        if (c === "STREAMING") return "STREAMING CHECKLIST";
+        if (c === "INFRASTRUCTURE") return "INFRASTRUCTURE CHECKLIST";
+        if (c === "OTHER") return "OTHER CHECKLIST";
+        if (c === "MISC") return "MISC CHECKLIST";
+        // Default safe fallback:
+        return "MISC CHECKLIST";
+      }
+
+      const writePlan = [];
+      const allowPricingLinks = !!(document.getElementById("allowAIPricingLinks") && document.getElementById("allowAIPricingLinks").checked);
+
+      for (const item of (selection || [])) {
+        const type = asText(item.type) || "existing"; // existing | new
+        const checklist = asText(item.checklist) || "Other";
+        const productName = asText(item.productName);
+        const qty = safeNumber(item.quantity);
+        const notes = asText(item.notes);
+        const reason = asText(item.reason);
+        const link = asText(item.link);
+        const priceExVat = item.priceExVat;
+
+        if (!productName) continue;
+
+        if (type === "new") {
+          const secName = "MISC CHECKLIST";
+          const sec = sections[secName.toUpperCase()];
+          if (!sec) throw new Error("Could not locate MISC checklist section.");
+
+          const row = firstEmptyRowInSection(ws, sec, "C");
+          if (!row) throw new Error("No empty rows found in MISC checklist area.");
+
+          // Write Product (C) + Qty (G) always
+          ws["C" + row] = { t: "s", v: productName };
+          if (qty != null) ws["G" + row] = { t: "n", v: qty };
+
+          // Price/link only if explicitly allowed (Be Strict default OFF)
+          if (allowPricingLinks) {
+            const pn = safeNumber(priceExVat);
+            if (pn != null) ws["F" + row] = { t: "n", v: pn };
+            if (link) ws["J" + row] = { t: "s", v: link };
+          }
+
+          // Notes: include reason so the sheet has the justification
+          const combinedNote = (notes ? notes : "") + (reason ? (notes ? " | " : "") + "Why: " + reason : "");
+          if (combinedNote) ws["K" + row] = { t: "s", v: combinedNote };
+
+          writePlan.push({ writeTo: "MISC", row, productName, qty, allowedPricingLinks: allowPricingLinks });
+          continue;
+        }
+
+        // existing item: write into the chosen checklist section (or MISC if unknown)
+        const secName = resolveSectionName(checklist);
+        const sec = sections[secName.toUpperCase()] || sections["MISC CHECKLIST"];
+        const row = firstEmptyRowInSection(ws, sec, "C");
+        if (!row) throw new Error("No empty rows found in section: " + secName);
+
+        ws["C" + row] = { t: "s", v: productName };
+        if (qty != null) ws["G" + row] = { t: "n", v: qty };
+
+        const combinedNote = (notes ? notes : "") + (reason ? (notes ? " | " : "") + "Why: " + reason : "");
+        if (combinedNote) ws["K" + row] = { t: "s", v: combinedNote };
+
+        writePlan.push({ writeTo: secName, row, productName, qty });
+      }
+
+      return writePlan;
+    }
+
+    async function handleGenerateProducts() {
+      if (!lastStructuredSummary) {
+        setAiStatus("Process the meeting first to get a structured summary.", true);
+        return;
+      }
+      if (typeof XLSX === "undefined") {
+        setAiStatus("Spreadsheet library (XLSX) is not available – wait a moment and try again.", true);
+        logDebug("handleGenerateProducts: XLSX is undefined.");
+        return;
+      }
+
+      const fileInput = document.getElementById("templateFile");
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        setAiStatus("Upload your template spreadsheet first.", true);
+        return;
+      }
+
+      setAiStatus("Reading workbook & generating product plan…", false);
+      document.getElementById("generateProductsBtn").disabled = true;
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const wb = XLSX.read(arrayBuffer, { type:"array" });
+
+        const { records, fixedRange } = readProductsTableFixed(wb);
+        const guided = readGuidedKit(wb);
+
+        updateProductsDetectStatus(
+          "Products range: " + fixedRange +
+          " | header row: " + PRODUCTS_HEADER_ROW_1BASED +
+          " | detected products: " + records.length,
+          false
+        );
+
+        const apiKey = getOpenAIKeyOrThrow();
+
+        const allowPricingLinks = !!(document.getElementById("allowAIPricingLinks") && document.getElementById("allowAIPricingLinks").checked);
+
+        const systemPrompt =
+          "You are an AV-consultant style product selector for a spreadsheet-driven workflow.\n" +
+          "You MUST be strict and avoid inventing items that are not justified.\n\n" +
+          "Inputs:\n" +
+          "- structuredSummary: includes agreedSolution + productNeeds\n" +
+          "- products: rows from the Products sheet (real catalogue, with rowIndex).\n" +
+          "- guidedKit: a list of frequent products used by the company. Prefer these where appropriate.\n\n" +
+          "Output goal:\n" +
+          "Return a list of items to write into the workbook's Checklists sheet.\n\n" +
+          "Rules (Be Strict):\n" +
+          "1) Prefer products that exist in the Products list.\n" +
+          "2) Category is guidance only: do NOT block cross-category dependencies.\n" +
+          "3) Choose sensible quantities; if unknown, use 1 and explain uncertainty in reason.\n" +
+          "4) Only propose NEW products if nothing suitable exists in Products.\n" +
+          "5) If allowPricingLinks=false, then for NEW items set priceExVat=null and link=\"\".\n" +
+          "6) If allowPricingLinks=true, you may suggest price/link BUT MUST label in reason that it requires verification.\n\n" +
+          "Return STRICT JSON ONLY in this format:\n" +
+          "{\n" +
+          "  \"items\": [\n" +
+          "    {\n" +
+          "      \"type\": \"existing\" | \"new\",\n" +
+          "      \"checklist\": \"Audio | Visual | Control | Streaming | Infrastructure | Other\",\n" +
+          "      \"productName\": \"exact product name (for existing, must match Products row value)\",\n" +
+          "      \"quantity\": 1,\n" +
+          "      \"notes\": \"short engineer note\",\n" +
+          "      \"reason\": \"why chosen\",\n" +
+          "      \"rowIndex\": 0,\n" +
+          "      \"priceExVat\": null,\n" +
+          "      \"link\": \"\"\n" +
+          "    }\n" +
+          "  ],\n" +
+          "  \"warnings\": [\"...\"]\n" +
+          "}";
+
+        // Build a minimal searchable list for the model (avoid huge payloads)
+        // Keep only key fields + rowIndex. (Still enough for matching.)
+        const slimProducts = records.map(r => {
+          return {
+            rowIndex: r.rowIndex,
+            Product: r.Product || r.product || r.Name || r.name || r["Product"] || r["Name"] || r["PRODUCT"] || r[Object.keys(r)[1]],
+            Price: r.Price,
+            "Product Link": r["Product Link"],
+            Category: r.Category,
+            Notes: r.Notes,
+            "Product Description": r["Product Description"]
+          };
+        });
+
+        const payload = {
+          allowPricingLinks,
+          structuredSummary: lastStructuredSummary,
+          products: slimProducts,
+          guidedKit: guided && guided.available ? guided.items : []
+        };
+
+        logDebug("Step 3 payload: products=" + slimProducts.length + ", guidedKit=" + (payload.guidedKit.length || 0));
+
+        const res = await fetch("https://api.openai.com/v1/responses", {
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer " + apiKey
+          },
+          body: JSON.stringify({
+            model: DEBUG_MODEL, // use 5.1 for “consultant brain”
+            input: [
+              { role:"system", content: systemPrompt },
+              { role:"user", content: JSON.stringify(payload) }
+            ]
+          })
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error("Product selection AI error " + res.status + ": " + txt);
+        }
+        const data = await res.json();
+        let rawText = "";
+        if (
+          data.output &&
+          data.output[0] &&
+          data.output[0].content &&
+          data.output[0].content[0] &&
+          data.output[0].content[0].text
+        ) {
+          rawText = data.output[0].content[0].text;
+        } else {
+          throw new Error("Unexpected product AI response shape.");
+        }
+
+        let parsed;
+        try {
+          parsed = JSON.parse(rawText);
+        } catch (e) {
+          console.error("Product AI JSON parse failed:", rawText);
+          throw new Error("Could not parse JSON from product AI.");
+        }
+
+        const items = Array.isArray(parsed.items) ? parsed.items : [];
+        const warnings = Array.isArray(parsed.warnings) ? parsed.warnings : [];
+
+        // Write into Checklists (not AutoSelected)
+        const writePlan = writeIntoChecklists(wb, items);
+
+        lastProductSelection = {
+          workbook: wb,
+          selection: items,
+          warnings,
+          writePlan
+        };
+
+        renderProductSelectionTable(lastProductSelection);
+        setAiStatus("Wrote selections into Checklists. Download the populated workbook when ready.", false);
+      } catch (e) {
+        console.error(e);
+        setAiStatus(e.message || "Error generating product suggestions.", true);
+        updateProductsDetectStatus(e.message || "Error reading workbook.", true);
+      } finally {
+        document.getElementById("generateProductsBtn").disabled = false;
+      }
+    }
+
+    function renderProductSelectionTable(state) {
+      const wrap = document.getElementById("productsTableWrapper");
+      if (!state || !state.selection || !state.selection.length) {
+        wrap.textContent = "No products suggested.";
+        return;
+      }
+
+      const rowsHtml = state.selection.map(item => {
+        const type = asText(item.type) || "existing";
+        const checklist = asText(item.checklist) || "";
+        const qty = item.quantity != null ? String(item.quantity) : "";
+        const name = asText(item.productName) || "";
+        const notes = asText(item.notes) || "";
+        const reason = asText(item.reason) || "";
+        return "<tr>" +
+          "<td>" + escapeHtml(type) + "</td>" +
+          "<td>" + escapeHtml(checklist) + "</td>" +
+          "<td>" + escapeHtml(String(qty)) + "</td>" +
+          "<td>" + escapeHtml(name) + "</td>" +
+          "<td>" + escapeHtml(notes) + "</td>" +
+          "<td>" + escapeHtml(reason) + "</td>" +
+        "</tr>";
+      }).join("");
+
+      const planHtml = (state.writePlan && state.writePlan.length)
+        ? state.writePlan.map(p => {
+            return "<li>" + escapeHtml(p.writeTo) + " → row " + escapeHtml(String(p.row)) +
+              " : " + escapeHtml(p.productName) +
+              (p.qty != null ? (" (Qty " + escapeHtml(String(p.qty)) + ")") : "") +
+              "</li>";
+          }).join("")
+        : "";
+
+      const warnHtml = (state.warnings && state.warnings.length)
+        ? "<div class='small-note danger' style='margin-top:6px;'><strong>Warnings:</strong><br>" +
+          state.warnings.map(w => escapeHtml(w)).join("<br>") + "</div>"
+        : "";
+
+      wrap.innerHTML =
+        "<table>" +
+          "<thead><tr>" +
+            "<th>Type</th>" +
+            "<th>Checklist</th>" +
+            "<th>Qty</th>" +
+            "<th>Product</th>" +
+            "<th>Notes</th>" +
+            "<th>Why chosen</th>" +
+          "</tr></thead>" +
+          "<tbody>" + rowsHtml + "</tbody>" +
+        "</table>" +
+        (planHtml ? ("<div class='small-note' style='margin-top:8px;'><strong>Write plan:</strong><ul>" + planHtml + "</ul></div>") : "") +
+        warnHtml;
+    }
+
+    function handleDownloadFilledTemplate() {
+      if (!lastProductSelection || !lastProductSelection.workbook) {
+        alert("Generate & write into Checklists first.");
+        return;
+      }
+      if (typeof XLSX === "undefined") {
+        alert("Spreadsheet library (XLSX) is not available.");
+        return;
+      }
+
+      const wbout = XLSX.write(lastProductSelection.workbook, { bookType:"xlsx", type:"array" });
+      const blob = new Blob([wbout], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "template_populated_checklists.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      }, 0);
+    }
+
+    // ======================
+    // STEP 4: PROPOSAL / QUOTE
+    // ======================
+    async function handleGenerateProposal() {
+      const pricedInput = document.getElementById("pricedFile");
+      const file = pricedInput.files && pricedInput.files[0];
+      if (!file) {
+        setAiStatus("Upload your priced spreadsheet first.", true);
+        return;
+      }
+      if (typeof XLSX === "undefined") {
+        setAiStatus("Spreadsheet library (XLSX) is not available.", true);
+        return;
+      }
+
+      document.getElementById("generateProposalBtn").disabled = true;
+      setAiStatus("Reading priced sheet & generating proposal…", false);
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const wb = XLSX.read(arrayBuffer, { type:"array" });
+
+        let sheetName = CHECKLISTS_SHEET_NAME;
+        if (!wb.Sheets[sheetName]) {
+          sheetName = wb.SheetNames[0];
+        }
+        const sheet = wb.Sheets[sheetName];
+        if (!sheet) throw new Error("No usable sheet found in priced workbook.");
+        const table = XLSX.utils.sheet_to_json(sheet, { header:1 });
+
+        const apiKey = getOpenAIKeyOrThrow();
+        const systemPrompt =
+          "You are generating a client-facing AV proposal/quote based on a priced spreadsheet and a consultation summary.\n\n" +
+          "You will receive:\n" +
+          "- A structured consultation summary (issues, current equipment, agreed solution).\n" +
+          "- A table from the 'Checklists' (or equivalent) sheet of a spreadsheet that includes products, prices, quantities, totals, and possibly labour/time.\n\n" +
+          "Your job:\n" +
+          "1) Identify the main components that should be described in the proposal (projectors, screens/TVs, main speakers, amps, microphones, key control hardware, streaming hardware etc.).\n" +
+          "   Do NOT write paragraphs about minor items (mounts, brackets, small accessories).\n" +
+          "2) For each main component, write a short, clear description referencing relevant details from the consultation summary\n" +
+          "   (e.g. mounting position like 'left wall', use-cases like film nights, speech clarity, etc.).\n" +
+          "3) Group costs sensibly (e.g. Audio, Visual, Control, Infrastructure, Labour) and show totals per group plus a grand total.\n" +
+          "4) Mention estimated days on site, based on any labour/time information in the table (if present). If there is genuinely no\n" +
+          "   indication of labour/time, say 'Installation duration to be confirmed'.\n" +
+          "5) Write this as a proposal/quote that could be sent to the client, in clear UK English.\n\n" +
+          "Rules:\n" +
+          "- Do NOT invent extra products or prices. Work only from the spreadsheet table.\n" +
+          "- You may infer reasonable grouping from headings and repeated 'CHECKLIST' sections.\n" +
+          "- Do NOT expose raw spreadsheet table in the body, but you can refer to product names.\n\n" +
+          "Structure the output as:\n" +
+          "1) Short opening paragraph referencing the client's situation.\n" +
+          "2) Bullet list of key benefits of the proposed solution.\n" +
+          "3) Headings for each main area (Audio System, Visual System, Control/Operation, Streaming/Broadcast, Infrastructure & Cabling, Labour & Timescales).\n" +
+          "4) Under each heading, short paragraphs describing what is included.\n" +
+          "5) Section with pricing breakdown per area and overall total.\n" +
+          "6) Closing paragraph about next steps.\n";
+
+        const payload = {
+          structuredSummary: lastStructuredSummary,
+          pricedSheetName: sheetName,
+          pricedTable: table
+        };
+
+        const res = await fetch("https://api.openai.com/v1/responses", {
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer " + apiKey
+          },
+          body: JSON.stringify({
+            model: TEXT_MODEL,
+            input: [
+              { role:"system", content: systemPrompt },
+              { role:"user", content: JSON.stringify(payload) }
+            ]
+          })
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error("Proposal AI error " + res.status + ": " + txt);
+        }
+        const data = await res.json();
+        let text = "";
+        if (
+          data.output &&
+          data.output[0] &&
+          data.output[0].content &&
+          data.output[0].content[0] &&
+          data.output[0].content[0].text
+        ) {
+          text = data.output[0].content[0].text;
+        } else {
+          throw new Error("Unexpected proposal response shape.");
+        }
+
+        lastProposalText = text;
+        document.getElementById("proposalPreview").textContent = text;
+        setAiStatus("Proposal generated. Review and tweak as needed.", false);
+      } catch (e) {
+        console.error(e);
+        setAiStatus(e.message || "Error generating proposal.", true);
+      } finally {
+        document.getElementById("generateProposalBtn").disabled = false;
+      }
+    }
+
+    function handleDownloadProposalDoc() {
+      if (!lastProposalText) {
+        alert("Generate a proposal first.");
+        return;
+      }
+      const html =
+        "<!doctype html><html><head><meta charset='utf-8'>" +
+        "<title>Proposal</title>" +
+        "<style>" +
+        "body{font-family:Calibri,Arial,sans-serif;font-size:11pt;color:#000;}"+
+        "h1,h2,h3{font-weight:bold;}"+
+        "</style></head><body>" +
+        "<pre style='white-space:pre-wrap;font-family:Calibri,Arial,sans-serif;'>" +
+        escapeHtml(lastProposalText) +
+        "</pre></body></html>";
+
+      const blob = new Blob([html], { type:"application/msword" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "proposal.doc";
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      }, 0);
+    }
+
+    // ====================
+    // AI DEBUGGER LOGIC
+    // ====================
+    const aiDebuggerSystemPrompt =
+      "You are an AI debugger for a single-page AV tool called 'Consultation Meeting Processor'.\\n" +
+      "The tool is delivered as a single index.html and runs entirely in the browser (no backend).\\n" +
+      "Your job is to review the current index.html source, the debug log, structured AI JSON, and browser errors to explain problems and propose minimal, safe fixes.\\n\\n" +
+      "Important rules (labelled 'Be Strict'):\\n" +
+      "1) Only change code when you can point to a concrete bug, missing handler, or clearly unsafe behaviour.\\n" +
+      "2) Never rewrite or simplify working code.\\n" +
+      "3) Keep all existing layout, styling, naming, and structure unless a specific bug forces a change.\\n" +
+      "4) When you change code, you must:\\n" +
+      "   - Explain the issue in plain language,\\n" +
+      "   - Explain why your change fixes it,\\n" +
+      "   - Describe exactly where the change belongs (function name or HTML section),\\n" +
+      "   - Provide a full replacement index.html with your changes applied.\\n" +
+      "5) The replacement index must be COMPLETE, from <!doctype html> to </html>, with NO truncation, ellipses, or placeholders.\\n" +
+      "6) Do not invent external configuration fixes (API keys, account/project changes, quotas). If the problem is external, say so explicitly.\\n\\n" +
+      "You will be given a JSON payload with:\\n" +
+      "- toolName, versionPill\\n" +
+      "- indexHtml (full current page source)\\n" +
+      "- debugLog (internal debug text)\\n" +
+      "- structuredJsonDebug (JSON from earlier AI calls, if any)\\n" +
+      "- browserErrors (window.onerror / unhandledrejection text)\\n" +
+      "- consoleCaptured (captured console.log/warn/error lines)\\n" +
+      "- consoleExtra (freeform text written by the user: problem description and/or pasted console)\\n\\n" +
+      "You must respond with STRICT JSON in this shape:\\n" +
+      "{\\n" +
+      '  \"outcome\": \"code_fix\" | \"external_issue\" | \"no_issue\",\\n' +
+      '  \"summary\": \"Short summary of what you found.\",\\n' +
+      '  \"reasons\": [\"reason 1\", \"reason 2\", \"...\"],\\n' +
+      '  \"changes\": [\\n' +
+      "    {\\n" +
+      '      \"section\": \"short label (e.g. transcribeAudio, Google auth)\",\\n' +
+      '      \"reason\": \"why this section needs a change\",\\n' +
+      '      \"beforeSnippet\": \"optional short snippet from the old code (can be empty)\",\\n' +
+      '      \"afterSnippet\": \"the corresponding fixed snippet (can be empty if not applicable)\"\\n' +
+      "    }\\n" +
+      "  ],\\n" +
+      '  \"replacementIndexHtml\": \"Full index.html with your fixes applied, or an empty string if no code changes are needed.\",\\n' +
+      '  \"chatgptPrompt\": \"If outcome is external_issue, write a prompt the user can paste into ChatGPT to get further help. Otherwise empty string.\"\\n' +
+      "}\\n" +
+      "If you believe the issue cannot be solved by changing index.html (for example: account or quota issues, missing model access, or third-party service outages), set outcome to \\\"external_issue\\\" and do NOT propose code changes.";
+
+    async function handleRunAiDebugger() {
+      let apiKey;
+      try {
+        apiKey = getOpenAIKeyOrThrow();
+      } catch (e) {
+        setAiStatus(e.message || "No API key set for AI Debugger.", true);
+        const outEl = document.getElementById("aiDebuggerOutput");
+        if (outEl) outEl.textContent = e.message || "No API key set.";
+        return;
+      }
+
+      const btn = document.getElementById("runAiDebuggerBtn");
+      if (btn) btn.disabled = true;
+      setAiStatus("Running AI Debugger…", false);
+      logDebug("AI Debugger invoked.");
+
+      const MAX_DEBUGLOG_CHARS = 40000;
+      const MAX_STRUCTURED_CHARS = 25000;
+      const MAX_USER_CHARS = 8000;
+      const MAX_BROWSER_ERRORS = 50;
+      const MAX_CONSOLE_CAPTURE = 200;
+      const MAX_CONSOLE_LINE_CHARS = 600;
+
+      const userText = (document.getElementById("consoleErrorsInput") && document.getElementById("consoleErrorsInput").value) || "";
+      const cappedConsoleCaptured = capArray(consoleLogCapture, MAX_CONSOLE_CAPTURE).map(line => truncateTail(line, MAX_CONSOLE_LINE_CHARS));
+      const cappedBrowserErrors = capArray(browserErrorLog, MAX_BROWSER_ERRORS).map(line => truncateTail(line, MAX_CONSOLE_LINE_CHARS));
+
+      const payload = {
+        toolName: "Consultation Meeting Processor",
+        versionPill: (document.querySelector(".version") && document.querySelector(".version").textContent) || "",
+        indexHtml: document.documentElement.outerHTML,
+        debugLog: truncateTail((document.getElementById("debugLog") && document.getElementById("debugLog").textContent) || "", MAX_DEBUGLOG_CHARS),
+        structuredJsonDebug: truncateTail((document.getElementById("debugJson") && document.getElementById("debugJson").textContent) || "", MAX_STRUCTURED_CHARS),
+        browserErrors: cappedBrowserErrors,
+        consoleCaptured: cappedConsoleCaptured,
+        consoleExtra: truncateTail(userText, MAX_USER_CHARS)
+      };
+
+      const outEl = document.getElementById("aiDebuggerOutput");
+      const replEl = document.getElementById("replacementIndexOutput");
+
+      try {
+        const res = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: {
+            "Content-Type":"application/json",
+            "Authorization":"Bearer " + apiKey
+          },
+          body: JSON.stringify({
+            model: DEBUG_MODEL,
+            input: [
+              { role:"system", content: aiDebuggerSystemPrompt },
+              { role:"user", content: JSON.stringify(payload) }
+            ]
+          })
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error("AI Debugger error " + res.status + ": " + txt);
+        }
+
+        const data = await res.json();
+        let rawText = "";
+        if (
+          data.output &&
+          data.output[0] &&
+          data.output[0].content &&
+          data.output[0].content[0] &&
+          data.output[0].content[0].text
+        ) {
+          rawText = data.output[0].content[0].text;
+        } else {
+          throw new Error("Unexpected AI Debugger response shape.");
+        }
+
+        let parsed;
+        try {
+          parsed = JSON.parse(rawText);
+        } catch (e) {
+          console.error("AI Debugger JSON parse failed:", rawText);
+          throw new Error("AI Debugger JSON parse failed.");
+        }
+
+        const outcome = parsed.outcome || "no_issue";
+        const summary = parsed.summary || "";
+        const reasons = Array.isArray(parsed.reasons) ? parsed.reasons : [];
+        const changes = Array.isArray(parsed.changes) ? parsed.changes : [];
+        const replacementIndexHtml = parsed.replacementIndexHtml || "";
+        const chatgptPrompt = parsed.chatgptPrompt || "";
+
+        let outText = "";
+        outText += "Outcome: " + outcome + "\n";
+        if (summary) {
+          outText += "\nSummary:\n" + summary + "\n";
+        }
+        if (reasons.length) {
+          outText += "\nReasons:\n";
+          reasons.forEach((r) => {
+            outText += "- " + r + "\n";
+          });
+        }
+        if (changes.length) {
+          outText += "\nChanges:\n";
+          changes.forEach((c, idx) => {
+            const section = c.section || ("Change " + (idx + 1));
+            const reason = c.reason || "";
+            outText += "* " + section + (reason ? " – " + reason : "") + "\n";
+          });
+        }
+
+        if (outEl) outEl.textContent = outText || "(no details provided by AI Debugger)";
+
+        if (replEl) {
+          if (outcome === "code_fix" && replacementIndexHtml) {
+            replEl.textContent = replacementIndexHtml;
+          } else if (outcome === "external_issue" && chatgptPrompt) {
+            replEl.textContent = chatgptPrompt;
+          } else {
+            replEl.textContent = "(no replacement index provided)";
+          }
+        }
+
+        setAiStatus("AI Debugger finished. Review its output below.", false);
+      } catch (e) {
+        console.error(e);
+        if (outEl) {
+          outEl.textContent = e.message || "AI Debugger error.";
+        }
+        setAiStatus(e.message || "AI Debugger error.", true);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    // ====================
+    // API KEY PANEL LOGIC
+    // ====================
+    function refreshApiKeyStatus() {
+      const statusEl = document.getElementById("apiKeyStatus");
+      const key = localStorage.getItem(OPENAI_KEY_STORAGE);
+      if (key) {
+        statusEl.textContent = "API key is stored in this browser.";
+      } else {
+        statusEl.textContent = "No API key stored yet.";
+      }
+    }
+
+    function handleSaveApiKey() {
+      const input = document.getElementById("apiKeyInput");
+      const v = (input.value || "").trim();
+      if (!v) {
+        alert("Enter a key first.");
+        return;
+      }
+      localStorage.setItem(OPENAI_KEY_STORAGE, v);
+      input.value = "";
+      refreshApiKeyStatus();
+      logDebug("OpenAI key saved to localStorage.");
+    }
+
+    function handleClearApiKey() {
+      localStorage.removeItem(OPENAI_KEY_STORAGE);
+      refreshApiKeyStatus();
+      logDebug("OpenAI key cleared from localStorage.");
+    }
+
+    // =========
+    // INIT
+    // =========
+    window.addEventListener("DOMContentLoaded", () => {
+      logDebug("DOM loaded.");
+
+      // Capture console output (log/warn/error) into consoleLogCapture for AI Debugger
+      (function hookConsole() {
+        try {
+          const origLog = console.log ? console.log.bind(console) : null;
+          const origWarn = console.warn ? console.warn.bind(console) : null;
+          const origErr = console.error ? console.error.bind(console) : null;
+
+          function fmtArgs(args) {
+            try {
+              return Array.from(args).map(a => {
+                if (typeof a === "string") return a;
+                try { return JSON.stringify(a); } catch (e) { return String(a); }
+              }).join(" ");
+            } catch (e) {
+              return "(unformattable console args)";
+            }
+          }
+
+          if (origLog) {
+            console.log = function() {
+              const ts = new Date().toISOString().replace("T"," ").slice(0,19);
+              consoleLogCapture.push("[" + ts + "] LOG: " + fmtArgs(arguments));
+              return origLog.apply(null, arguments);
+            };
+          }
+          if (origWarn) {
+            console.warn = function() {
+              const ts = new Date().toISOString().replace("T"," ").slice(0,19);
+              consoleLogCapture.push("[" + ts + "] WARN: " + fmtArgs(arguments));
+              return origWarn.apply(null, arguments);
+            };
+          }
+          if (origErr) {
+            console.error = function() {
+              const ts = new Date().toISOString().replace("T"," ").slice(0,19);
+              consoleLogCapture.push("[" + ts + "] ERROR: " + fmtArgs(arguments));
+              return origErr.apply(null, arguments);
+            };
+          }
+
+          logDebug("Console capture enabled (log/warn/error).");
+        } catch (e) {
+          logDebug("Console capture hook failed: " + (e && e.message ? e.message : String(e)));
+        }
+      })();
+
+      // Capture browser-level errors into browserErrorLog and debug pane
+      window.addEventListener("error", (event) => {
+        const msg = (event.message || "Unknown error") +
+          (event.filename ? (" @ " + event.filename + ":" + event.lineno + ":" + event.colno) : "");
+        browserErrorLog.push(msg);
+        logDebug("BROWSER ERROR: " + msg);
+      });
+
+      window.addEventListener("unhandledrejection", (event) => {
+        const reason = event.reason;
+        const msg = "Unhandled promise rejection: " + (reason && reason.message ? reason.message : String(reason || "unknown"));
+        browserErrorLog.push(msg);
+        logDebug("BROWSER ERROR: " + msg);
+      });
+
+      document.getElementById("signinBtn").addEventListener("click", signInManual);
+      document.getElementById("processBtn").addEventListener("click", handleProcessMeeting);
+      document.getElementById("generateProductsBtn").addEventListener("click", handleGenerateProducts);
+      document.getElementById("downloadFilledTemplateBtn").addEventListener("click", handleDownloadFilledTemplate);
+      document.getElementById("generateProposalBtn").addEventListener("click", handleGenerateProposal);
+      document.getElementById("downloadProposalDocBtn").addEventListener("click", handleDownloadProposalDoc);
+
+      const eventSelect = document.getElementById("eventSelect");
+      eventSelect.addEventListener("change", () => {
+        const idx = eventSelect.value;
+        if (!idx) return;
+        const ev = currentEvents[Number(idx)];
+        if (ev) {
+          setStatus("Selected: " + (ev.summary || "(no title)"), false);
+        }
+      });
+
+      const runAiDebuggerBtn = document.getElementById("runAiDebuggerBtn");
+      if (runAiDebuggerBtn) {
+        runAiDebuggerBtn.addEventListener("click", handleRunAiDebugger);
+      }
+
+      // Date range advanced panel handlers
+      const applyDateBtn = document.getElementById("applyDateRangeBtn");
+      const clearDateBtn = document.getElementById("clearDateRangeBtn");
+      if (applyDateBtn && clearDateBtn) {
+        applyDateBtn.addEventListener("click", () => {
+          const startInput = document.getElementById("startDateInput");
+          const endInput = document.getElementById("endDateInput");
+          const startVal = startInput && startInput.value;
+          const endVal = endInput && endInput.value;
+
+          if (!startVal || !endVal) {
+            setStatus("Both start and end dates are required for a custom range.", true);
+            return;
+          }
+          if (new Date(startVal) > new Date(endVal)) {
+            setStatus("Start date cannot be after end date.", true);
+            return;
+          }
+
+          customDateRange.start = startVal;
+          customDateRange.end = endVal;
+          logDebug("Custom date range set via UI.");
+          loadRecentEvents();
+        });
+
+        clearDateBtn.addEventListener("click", () => {
+          const startInput = document.getElementById("startDateInput");
+          const endInput = document.getElementById("endDateInput");
+          if (startInput) startInput.value = "";
+          if (endInput) endInput.value = "";
+          customDateRange.start = null;
+          customDateRange.end = null;
+          logDebug("Custom date range cleared; reverting to default window.");
+          loadRecentEvents();
+        });
+      }
+
+      // API key handlers
+      document.getElementById("saveApiKeyBtn").addEventListener("click", handleSaveApiKey);
+      document.getElementById("clearApiKeyBtn").addEventListener("click", handleClearApiKey);
+      refreshApiKeyStatus();
+
+      setStatus("Waiting for sign-in…", false);
+      updateProductsDetectStatus("Products range: (not loaded yet) — upload your workbook in Step 3.", false);
+
+      // Prepare Google auth client
+      setTimeout(() => {
+        try { initAuth(); } catch(e) { logDebug("initAuth error: " + e.message); }
+      }, 0);
+    });
+  </script>
+</body>
+</html>

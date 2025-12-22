@@ -1,0 +1,1591 @@
+<!--
+====================================================================
+CODEX BANNER (STANDARD — DO NOT REMOVE)
+====================================================================
+Tool: AVD Overtime Calculator
+Tool code: OT-CALC
+Version: v0.13
+Last updated: 2025-12-21
+
+Codex pointers:
+- Read root CODEX.md first (high-level behaviour + non-negotiables).
+- Then read context/OT-CALC.md (full detail, invariants, regression checks).
+====================================================================
+-->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AVD Overtime Calculator</title>
+  <meta name="color-scheme" content="light dark" />
+  <meta name="google-oauth-client-id"
+        content="105230737516-l8tlnck4idde83pjetrotobpt8borvts.apps.googleusercontent.com" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+  <style>
+    :root {
+      --bg:#0f172a; --card:#020617; --panel:#020617; --border:#1e293b;
+      --text:#e5e7eb; --muted:#94a3b8; --accent:#38bdf8; --accent-soft:rgba(56,189,248,0.12);
+      --danger:#ef4444;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg:#f8fafc; --card:#ffffff; --panel:#ffffff; --border:#e5e7eb;
+        --text:#020617; --muted:#475569; --accent:#0ea5e9; --accent-soft:rgba(14,165,233,0.10);
+        --danger:#b91c1c;
+      }
+    }
+
+    * { box-sizing:border-box; }
+    html, body { height:100%; }
+
+    body {
+      margin:0;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(900px 600px at 5% 0%, rgba(56,189,248,0.10), transparent 55%),
+        radial-gradient(800px 600px at 95% 0%, rgba(129,140,248,0.12), transparent 50%),
+        var(--bg);
+      color:var(--text);
+    }
+
+    .wrap { max-width: 1200px; margin:0 auto; padding:18px; }
+
+    .card {
+      background:var(--card);
+      border-radius:20px;
+      border:1px solid var(--border);
+      padding:18px 18px 22px;
+      box-shadow:0 18px 40px rgba(15,23,42,0.45);
+      margin-bottom:16px;
+    }
+
+    h1 {
+      margin:0 0 4px;
+      font-size:26px;
+      letter-spacing:.02em;
+      display:flex;
+      align-items:baseline;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+
+    .version-btn {
+      font-size:11px;
+      font-weight:600;
+      color:var(--muted);
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:transparent;
+      cursor:pointer;
+      transition: background .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease, transform .06s ease;
+    }
+    .version-btn:hover {
+      border-color:var(--accent);
+      color:var(--accent);
+      background:var(--accent-soft);
+      box-shadow:0 4px 10px rgba(15,23,42,0.4);
+      transform:translateY(-0.5px);
+    }
+    .version-btn:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+
+    .muted { color:var(--muted); font-size:14px; }
+
+    .pill {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      font-size:11px;
+      padding:3px 9px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+      text-decoration:none;
+      cursor:pointer;
+      transition: border-color .12s ease, background .12s ease, color .12s ease,
+                  transform .06s ease, box-shadow .12s ease;
+      background:transparent;
+    }
+    .pill:hover {
+      border-color:var(--accent);
+      color:var(--accent);
+      background:var(--accent-soft);
+      transform:translateY(-0.5px);
+      box-shadow:0 3px 8px rgba(15,23,42,0.35);
+    }
+
+    .section {
+      margin-top:14px;
+      padding:12px;
+      border-radius:12px;
+      background:rgba(15,23,42,0.65);
+      border:1px dashed var(--border);
+    }
+    @media (prefers-color-scheme: light) {
+      .section { background:#f9fafb; }
+    }
+
+    .section-title {
+      font-size:13px;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+
+    label {
+      font-size:13px;
+      font-weight:600;
+      margin-bottom:4px;
+      display:block;
+    }
+
+    input, select, textarea, button {
+      font-size:14px;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--panel);
+      color:var(--text);
+      box-sizing:border-box;
+    }
+
+    input, select, textarea { width:100%; }
+    textarea { resize:vertical; min-height:70px; }
+    input::placeholder, textarea::placeholder { color:var(--muted); }
+
+    .small-note, .note { font-size:11px; color:var(--muted); margin-top:3px; }
+
+    .grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap:10px;
+    }
+
+    .btnrow, .btn-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+
+    button {
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      cursor:pointer;
+      transition:transform .06s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+    }
+    button.primary { border-color:var(--accent); background:linear-gradient(180deg,var(--accent-soft),transparent); }
+    button:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(15,23,42,0.5); }
+
+    .danger { border-color:var(--danger) !important; color:var(--danger); }
+    .danger-text { color:var(--danger); }
+
+    /* KPI cards */
+    .kpi {
+      display:grid;
+      gap:10px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-top:12px;
+    }
+    .kpi > div {
+      background:var(--panel);
+      border:1px solid var(--border);
+      border-radius:10px;
+      padding:12px;
+    }
+    .big { font-size:20px; font-weight:700; }
+
+    /* Table */
+    table { width:100%; border-collapse:collapse; font-size:12px; margin-top:10px; }
+    th, td { border:1px solid var(--border); padding:6px 8px; vertical-align:top; text-align:left; }
+    th { background:rgba(15,23,42,0.6); font-weight:600; }
+    @media (prefers-color-scheme: light) { th { background:#e5e7eb; } }
+
+    .logbox { border:2px dashed var(--border); border-radius:10px; padding:10px; background:var(--panel); }
+    .badge { display:inline-block; font-size:12px; border:1px solid var(--border); padding:2px 8px; border-radius:999px; color:var(--muted); }
+
+    details.debug,
+    details.api,
+    details.calendar-settings,
+    details.ai-debugger,
+    details.replacement-output,
+    details.calendar-range,
+    details.tool-info {
+      margin-top:10px;
+      border-radius:12px;
+      border:1px dashed var(--border);
+      padding:8px 10px;
+      background:rgba(15,23,42,0.4);
+      font-size:11px;
+    }
+    @media (prefers-color-scheme: light) {
+      details.debug,
+      details.api,
+      details.calendar-settings,
+      details.ai-debugger,
+      details.replacement-output,
+      details.calendar-range,
+      details.tool-info { background:#f3f4f6; }
+    }
+
+    details.debug summary,
+    details.api summary,
+    details.calendar-settings summary,
+    details.ai-debugger summary,
+    details.replacement-output summary,
+    details.calendar-range summary,
+    details.tool-info summary {
+      cursor:pointer;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    details.debug pre { white-space:pre-wrap; font-size:11px; margin-top:4px; }
+
+    .flag-row {
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:8px;
+      font-size:12px;
+    }
+    .flag-row label {
+      display:flex;
+      align-items:center;
+      gap:6px;
+      font-weight:500;
+      margin-bottom:0;
+    }
+    .flag-row input[type="checkbox"] { width:auto; accent-color:var(--accent); }
+
+    .day-type-label { margin-top:8px; font-size:12px; color:var(--muted); }
+
+    .tool-info-grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap:8px;
+      font-size:13px;
+    }
+    .tool-info-item-label {
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:var(--muted);
+      margin-bottom:2px;
+    }
+    .tool-info-item-value { font-size:13px; }
+
+    /* ============================
+       Step 1: Advanced date range
+       (match screenshot style)
+       ============================ */
+
+    /* Make the disclosure look like a simple inline row, not a button */
+    details.calendar-range {
+      background:transparent;
+      border:none;
+      padding:0;
+      margin-top:8px;
+    }
+
+    details.calendar-range > summary {
+      list-style:none;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:0;
+      border:none;
+      background:transparent;
+      user-select:none;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    /* Remove native markers to avoid double-indicator */
+    details.calendar-range > summary::-webkit-details-marker { display:none; }
+    details.calendar-range > summary::marker { content:""; }
+
+    /* Custom caret marker (consistent across tools/browsers) */
+    .adv-caret {
+      width:0; height:0;
+      border-left:5px solid transparent;
+      border-right:5px solid transparent;
+      border-top:7px solid currentColor;
+      opacity:0.9;
+      transform: rotate(-90deg); /* closed: points right */
+      transition: transform .12s ease, opacity .12s ease;
+      display:inline-block;
+    }
+
+    details.calendar-range[open] > summary .adv-caret {
+      transform: rotate(0deg); /* open: points down */
+      opacity:1;
+    }
+
+    details.calendar-range[open] > summary {
+      color:var(--text);
+    }
+
+    /* Inner panel that appears when open */
+    .range-panel {
+      margin-top:10px;
+      padding:12px;
+      border-radius:12px;
+      background:rgba(2,6,23,0.35);
+      border:1px dashed var(--border);
+    }
+    @media (prefers-color-scheme: light) {
+      .range-panel { background:rgba(248,250,252,0.8); }
+    }
+
+    .range-actions {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .range-actions .small-note { margin-top:0; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+        <div>
+          <h1>
+            <span id="toolNameHeading">AVD Overtime Calculator</span>
+            <button id="copyVersionBtn" class="version-btn" type="button"
+                    title="Copy full index.html to clipboard"
+                    aria-label="Copy full index.html to clipboard">v0.14</button>
+          </h1>
+          <div class="muted" id="toolShortDescription">
+            Daily overtime calculator with optional Google Calendar event picker.
+          </div>
+        </div>
+        <a href="https://frazerboorman.github.io/" class="pill">Frazer · AVD TOOLS</a>
+      </div>
+
+      <!-- Tool info (HIDDEN by default) -->
+      <div class="section">
+        <details class="tool-info" id="toolInfoDetails">
+          <summary class="section-title" style="margin:0;">Tool info (advanced)</summary>
+
+          <div style="margin-top:10px;">
+            <div class="tool-info-grid">
+              <div>
+                <div class="tool-info-item-label">Tool name</div>
+                <div class="tool-info-item-value" id="toolNameInfo">AVD Overtime Calculator</div>
+              </div>
+              <div>
+                <div class="tool-info-item-label">Version</div>
+                <div class="tool-info-item-value" id="toolVersionInfo">v0.14</div>
+              </div>
+              <div>
+                <div class="tool-info-item-label">Last updated</div>
+                <div class="tool-info-item-value" id="toolLastUpdatedInfo">2025-12-21</div>
+              </div>
+              <div>
+                <div class="tool-info-item-label">Tool code</div>
+                <div class="tool-info-item-value" id="toolCodeInfo">OT-CALC</div>
+              </div>
+            </div>
+
+            <div class="small-note" style="margin-top:6px;" id="toolNotesInfo">
+              Notes: This tool follows the shared AVD template (calendar picker, shared OpenAI key panel, debug + AI debugger).
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- STEP 1 – Calendar -->
+      <div class="section">
+        <div class="section-title">Step 1 – (Optional) Load events from Google Calendar</div>
+
+        <div class="btnrow">
+          <button id="signin" class="primary" type="button">Sign in to Google</button>
+          <!-- Load last 14 days button removed (auto-load after sign-in) -->
+        </div>
+        <div id="authStatus" class="note">Status: Not signed in</div>
+
+        <div class="grid" style="margin-top:12px;">
+          <div>
+            <label for="eventPick">Events (newest first)</label>
+            <select id="eventPick">
+              <option value="">— Select event (optional) —</option>
+            </select>
+          </div>
+          <div style="align-self:end;">
+            <!-- Use Selected Event button removed (auto-select + auto-apply after load) -->
+            <div class="note">Auto-fills the Date + Job/Location from the most recent event.</div>
+          </div>
+        </div>
+
+        <!-- Advanced date range (disclosure row like screenshots; closed by default) -->
+        <details class="calendar-range" id="advancedRangeDetails">
+          <summary><span class="adv-caret" aria-hidden="true"></span>Advanced date range</summary>
+
+          <div class="range-panel">
+            <div class="grid">
+              <div>
+                <label for="fromDate">Start date</label>
+                <input id="fromDate" type="date" />
+                <div class="small-note">Defaults to 14 days ago.</div>
+              </div>
+              <div>
+                <label for="toDate">End date</label>
+                <input id="toDate" type="date" />
+                <div class="small-note">Defaults to today (you can set a future end date).</div>
+              </div>
+            </div>
+
+            <div class="range-actions">
+              <button id="applyRangeBtn" type="button">Apply date range</button>
+              <div class="small-note">Loads events inside this range (future events included).</div>
+            </div>
+
+            <div class="range-actions" style="margin-top:8px;">
+              <button id="resetRangeBtn" type="button">Reset to last 14 days</button>
+              <div id="rangeStatus" class="small-note"></div>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- STEP 2 – Daily inputs -->
+      <div class="section">
+        <div class="section-title">Step 2 – Daily inputs</div>
+        <div class="grid">
+          <div>
+            <label for="jobRef">Job / Location</label>
+            <input id="jobRef" placeholder="e.g. The Minster – Axminster – EX13 5AQ" />
+          </div>
+          <div>
+            <label for="date">Date</label>
+            <input id="date" type="date" />
+          </div>
+          <div>
+            <label for="leaveTime">Time left</label>
+            <input id="leaveTime" type="time" step="300" />
+            <div class="note">Defaults to 07:45 if left blank.</div>
+          </div>
+          <div>
+            <label for="returnTime">Time returned</label>
+            <input id="returnTime" type="time" step="300" />
+            <div class="note">Required for calculation.</div>
+          </div>
+          <div>
+            <label for="baseRate">Base hourly rate (£)</label>
+            <input id="baseRate" inputmode="decimal" value="15.70" />
+          </div>
+        </div>
+
+        <div class="flag-row">
+          <label>
+            <input type="checkbox" id="fullOfficeDay" />
+            Full office/admin day (no overtime)
+          </label>
+          <label>
+            <input type="checkbox" id="officeFinishDay" />
+            Returned to office by ~16:00 (no overtime after 17:00)
+          </label>
+        </div>
+
+        <div class="btnrow">
+          <button id="calcBtn" class="primary" type="button">Calculate</button>
+          <button id="addRowBtn" type="button">Add results to table</button>
+        </div>
+        <div id="calcStatus" class="small-note"></div>
+      </div>
+
+      <!-- STEP 3 – Results -->
+      <div class="section">
+        <div class="section-title">Step 3 – Results</div>
+        <div class="kpi">
+          <div>
+            <div class="muted">Total worked (raw)</div>
+            <div class="big" id="allHours">—</div>
+          </div>
+          <div>
+            <div class="muted">Pre-09:00 OT (after 15m deduction)</div>
+            <div class="big" id="graceHours">—</div>
+          </div>
+          <div>
+            <div class="muted">Core hours</div>
+            <div class="big" id="coreHours">—</div>
+          </div>
+          <div>
+            <div class="muted">Post-17:00 OT (after 15m deduction)</div>
+            <div class="big" id="otHours">—</div>
+          </div>
+          <div>
+            <div class="muted">OT Due @ base rate</div>
+            <div class="big" id="otBase">—</div>
+          </div>
+        </div>
+        <div id="dayTypeLabel" class="day-type-label">Day type: —</div>
+      </div>
+
+      <!-- STEP 4 – Log & export -->
+      <div class="section">
+        <div class="section-title">Step 4 – Log & export</div>
+        <h2 style="margin:8px 0 8px;font-size:18px;display:flex;align-items:center;gap:8px;">
+          LOG <span id="logCount" class="badge">0 entries</span>
+        </h2>
+
+        <div id="logBox" class="logbox">
+          <table id="logTable">
+            <thead>
+              <tr>
+                <th style="width:120px;">Actions</th>
+                <th>Date</th>
+                <th>Job / Location</th>
+                <th>Time left</th>
+                <th>Time returned</th>
+                <th>Total worked</th>
+                <th>Total overtime</th>
+                <th>OT Due</th>
+              </tr>
+            </thead>
+            <tbody id="logBody">
+              <tr id="placeholderRow">
+                <td colspan="8" class="note">No entries yet — add one above.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="btnrow">
+            <button id="exportPdf" class="primary" type="button">Export PDF</button>
+            <button id="clearLog" class="danger" type="button">Clear table</button>
+          </div>
+        </div>
+
+        <p class="note" style="margin-top:12px;">
+          Authorisation signature appears on exported PDF only.
+        </p>
+      </div>
+
+      <!-- OpenAI status (template standard) -->
+      <div class="section">
+        <div class="section-title">OpenAI integration status</div>
+        <div id="openAiStatus" class="small-note">
+          This tool doesn’t use OpenAI by default, but the shared key + AI Debugger are included for consistency.
+        </div>
+      </div>
+    </div>
+
+    <!-- Debug panel (hidden by default) -->
+    <details class="debug">
+      <summary>Debug panel</summary>
+      <pre id="debugLog">(empty)</pre>
+    </details>
+
+    <!-- Calendar settings (hidden by default) -->
+    <details class="calendar-settings">
+      <summary>Calendar settings (Calendar ID / Advanced)</summary>
+      <div class="small-note" style="margin-top:4px;">
+        Advanced: change which Google Calendar this tool reads from. Usually leave as-is.
+      </div>
+
+      <div class="grid" style="margin-top:8px;max-width:920px;">
+        <div>
+          <label for="calendarId">Calendar ID</label>
+          <input id="calendarId"
+                 value="bb14db72acb2ffd4230316960d02103fa66e54901522ff7b8113eec682f6d42e@group.calendar.google.com" />
+          <div class="small-note">Shared calendar used in other AVD tools.</div>
+        </div>
+        <div>
+          <label for="employeeName">Employee</label>
+          <input id="employeeName" value="Frazer" />
+          <div class="small-note">Derived from calendar ID when possible; defaults to Frazer.</div>
+        </div>
+      </div>
+    </details>
+
+    <!-- API key panel (hidden by default) -->
+    <details class="api">
+      <summary>API key (OpenAI) – hidden by default</summary>
+      <div class="small-note" style="margin-top:4px;">
+        Stored locally in <code>localStorage['avd_job_report_openai_key']</code>. Not sent anywhere except OpenAI’s API.
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap;">
+        <input id="apiKeyInput" type="password" placeholder="sk-..." style="flex:1 1 220px;max-width:380px;" />
+        <button type="button" id="saveApiKeyBtn">Save</button>
+        <button type="button" id="clearApiKeyBtn">Forget</button>
+        <button type="button" id="testOpenAiBtn">Test OpenAI call</button>
+      </div>
+      <div id="apiKeyStatus" class="small-note"></div>
+    </details>
+
+    <!-- AI Debugger (Be Strict) -->
+    <details class="ai-debugger">
+      <summary>AI Debugger (Be Strict) – Jobs/Reports prompt tester</summary>
+      <div class="small-note" style="margin-top:4px;">
+        Use this to test “Jobs/Reports” prompt wording + model behaviour on the same shared key.
+      </div>
+
+      <div class="grid" style="margin-top:8px;">
+        <div>
+          <label for="aiModel">Model</label>
+          <select id="aiModel"></select>
+          <div class="small-note">Includes gpt-5.2 + sensible fallbacks.</div>
+        </div>
+        <div>
+          <label for="aiTemperature">Temperature</label>
+          <input id="aiTemperature" inputmode="decimal" value="0.2" />
+          <div class="small-note">Lower = more consistent.</div>
+        </div>
+      </div>
+
+      <div style="margin-top:8px;">
+        <label for="aiSystemPrompt">System prompt (Jobs/Reports)</label>
+        <textarea id="aiSystemPrompt" rows="6"></textarea>
+      </div>
+
+      <div style="margin-top:8px;">
+        <label for="aiUserInput">User input</label>
+        <textarea id="aiUserInput" rows="6" placeholder="Paste a job/report snippet here to test…"></textarea>
+      </div>
+
+      <div class="btnrow">
+        <button id="runAiDebuggerBtn" class="primary" type="button">Run AI Debugger</button>
+        <button id="copyAiOutputBtn" type="button">Copy output</button>
+      </div>
+
+      <div style="margin-top:10px;">
+        <label for="aiOutput">AI output</label>
+        <textarea id="aiOutput" rows="8" placeholder="AI output will appear here…"></textarea>
+      </div>
+
+      <div id="aiDebuggerStatus" class="small-note"></div>
+    </details>
+
+    <!-- Replacement index.html output -->
+    <details class="replacement-output">
+      <summary>Replacement index.html output (copy/paste)</summary>
+      <div class="small-note" style="margin-top:4px;">
+        If clipboard fails on iOS, you can copy the full page from here.
+      </div>
+      <div style="margin-top:8px;">
+        <textarea id="replacementIndexOutput" rows="10" placeholder="Click the version pill (v0.14) to generate this…"></textarea>
+      </div>
+      <div class="btnrow">
+        <button id="copyReplacementBtn" type="button">Copy this text</button>
+      </div>
+    </details>
+  </div>
+
+  <script>
+    /*
+      ============================================================
+      AVD OT-CALC — TOOL CONSTITUTION + GUARD RAILS (CODEX ONLY)
+      ============================================================
+
+      Pointer:
+      - Root: CODEX.md (front door).
+      - Full: context/OT-CALC.md (service manual).
+
+      Purpose:
+      - Provide a stable overtime calculator with optional Google Calendar event picker.
+      - Calendar picker is convenience only; manual entry must always work.
+
+      Non-negotiables / invariants:
+      1) Calendar flow:
+         - After OAuth success (“Signed in”), auto-fetch events for default range.
+         - Events sorted newest-first, auto-select most recent, auto-fill job/date.
+         - “Apply date range” re-fetches immediately; no extra “load” button required.
+
+      2) Overtime logic integrity:
+         - OT Due is based on payable overtime minutes.
+         - “Total overtime” in table/report must match payable minutes (after 15m deductions),
+           so finance can verify OT Due directly.
+
+      3) UX constraints:
+         - Advanced date range must be a <details>/<summary> disclosure row (not a button).
+         - Disclosure is closed by default on refresh.
+         - Disclosure shows a consistent caret marker (rotates closed→open).
+
+      4) Persistence:
+         - Keep STORAGE_KEY stable unless explicitly migrating saved state.
+
+      5) Safe edits:
+         - Do not refactor unrelated sections.
+         - No silent changes to rate rules, grace rules, or checkbox semantics.
+    */
+
+    // =========================
+    // TOOL METADATA CONSTANTS
+    // =========================
+    const TOOL_NAME = "AVD Overtime Calculator";
+    const TOOL_VERSION = "v0.14";
+    const TOOL_LAST_UPDATED = "2025-12-21";
+    const TOOL_CODE = "OT-CALC";
+
+    // =========================
+    // CONFIG / SHARED CONSTANTS
+    // =========================
+    const CLIENT_ID = "105230737516-l8tlnck4idde83pjetrotobpt8borvts.apps.googleusercontent.com";
+    const SCOPES = "https://www.googleapis.com/auth/calendar.readonly";
+    const OPENAI_KEY_STORAGE = "avd_job_report_openai_key"; // shared across AVD tools
+
+    // OT tool state storage (kept to preserve existing saved logs)
+    const STORAGE_KEY = "avd_ot_stable_calendar_autofetch_v4_4";
+
+    // Time rules
+    const GRACE_END = 9*60;
+    const CORE_END  = 17*60;
+
+    // OpenAI models (includes gpt-5.2 as requested)
+    const MODEL_CANDIDATES = [
+      "gpt-5.2",
+      "gpt-5.2-mini",
+      "gpt-5.1",
+      "gpt-5.1-mini",
+      "gpt-4.1",
+      "gpt-4.1-mini",
+      "gpt-4o",
+      "gpt-4o-mini"
+    ];
+
+    let accessToken = null;
+    let tokenClient = null;
+
+    // Calendar range control
+    let USE_CUSTOM_RANGE = false;
+
+    // ---------- UI init (metadata) ----------
+    function applyToolMetadata() {
+      const setText = (id, txt) => { const el=document.getElementById(id); if(el) el.textContent = txt; };
+      setText("toolNameHeading", TOOL_NAME);
+      setText("toolNameInfo", TOOL_NAME);
+      setText("toolVersionInfo", TOOL_VERSION);
+      setText("toolLastUpdatedInfo", TOOL_LAST_UPDATED);
+      setText("toolCodeInfo", TOOL_CODE);
+      const vBtn = document.getElementById("copyVersionBtn");
+      if (vBtn) vBtn.textContent = TOOL_VERSION;
+    }
+
+    // ---------- DEBUG ----------
+    function logDebug(msg, data) {
+      const el = document.getElementById("debugLog");
+      if (!el) return;
+      const ts = new Date().toISOString().replace("T"," ").slice(0,19);
+      let line = `[${ts}] ${msg}`;
+      if (data !== undefined) {
+        try { line += " " + JSON.stringify(data); }
+        catch { line += " " + String(data); }
+      }
+      el.textContent += line + "\n";
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function setAuthStatus(msg, ok) {
+      const el = document.getElementById("authStatus");
+      if (!el) return;
+      el.textContent = "Status: " + msg;
+      el.className = ok ? "note" : "note danger-text";
+      logDebug("AUTH: " + msg + (ok ? "" : " [ERROR]"));
+    }
+
+    function setCalcStatus(msg, isError) {
+      const el = document.getElementById("calcStatus");
+      if (!el) return;
+      el.textContent = msg || "";
+      el.className = isError ? "small-note danger-text" : "small-note";
+      if (msg) logDebug("CALC: " + msg + (isError ? " [ERROR]" : ""));
+    }
+
+    // ---------- CALENDAR AUTH ----------
+    function initAuth() {
+      if (!window.google?.accounts?.oauth2) {
+        logDebug("Google auth library not ready yet.");
+        return;
+      }
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        prompt: "",
+        callback: async (resp) => {
+          logDebug("Google OAuth callback", resp);
+          if (resp?.access_token) {
+            accessToken = resp.access_token;
+            setAuthStatus("Signed in", true);
+
+            // Auto-load last 14 days after sign-in
+            try { await fetchEvents(); }
+            catch (e) { setAuthStatus("Calendar load failed", false); logDebug("Auto fetchEvents failed", String(e)); }
+
+          } else {
+            setAuthStatus("Sign-in failed", false);
+          }
+        }
+      });
+      logDebug("Google token client initialised.");
+    }
+
+    function signIn() {
+      if (!tokenClient) initAuth();
+      if (!tokenClient) return setAuthStatus("Auth not ready (try again in a moment)", false);
+      tokenClient.requestAccessToken();
+    }
+
+    // Default is last 14 days (incl. today)
+    function defaultCalendarRange() {
+      // IMPORTANT: use *local* date formatting.
+      // Using toISOString().slice(0,10) can drift a day in some timezones.
+      const pad2 = (n) => String(n).padStart(2, "0");
+      const toLocalYMD = (d) => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+
+      const now = new Date();
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate()); // today (local)
+      const start = new Date(end);
+      start.setDate(start.getDate() - 13);
+
+      return { from: toLocalYMD(start), to: toLocalYMD(end) };
+    }
+
+    function ensureCalendarRangeInputs() {
+      const fromEl = document.getElementById("fromDate");
+      const toEl = document.getElementById("toDate");
+      if (!fromEl || !toEl) return;
+      const def = defaultCalendarRange();
+      if (!fromEl.value) fromEl.value = def.from;
+      if (!toEl.value) toEl.value = def.to;
+    }
+
+    function timeRangeISO(dateStr, endOfDay) {
+      const [y,m,d] = dateStr.split("-").map(Number);
+      if (endOfDay) return new Date(Date.UTC(y,m-1,d,23,59,59)).toISOString();
+      return new Date(Date.UTC(y,m-1,d,0,0,0)).toISOString();
+    }
+
+    function useSelectedEvent() {
+      const opt = document.getElementById("eventPick").selectedOptions[0];
+      if (!opt) return;
+      if (opt.textContent) document.getElementById("jobRef").value = opt.textContent.split(" — ")[0].trim();
+      if (opt.dataset.date) document.getElementById("date").value = opt.dataset.date;
+    }
+
+    async function fetchEvents() {
+      if (!accessToken) return setAuthStatus("Sign in first", false);
+
+      ensureCalendarRangeInputs();
+
+      let fromStr, toStr;
+
+      if (USE_CUSTOM_RANGE) {
+        fromStr = document.getElementById("fromDate").value;
+        toStr   = document.getElementById("toDate").value;
+        if (!fromStr || !toStr) return setAuthStatus("Pick From/To dates in Advanced range", false);
+      } else {
+        const def = defaultCalendarRange();
+        fromStr = def.from;
+        toStr   = def.to;
+        // keep advanced inputs in sync
+        document.getElementById("fromDate").value = fromStr;
+        document.getElementById("toDate").value = toStr;
+      }
+
+      const fromISO = timeRangeISO(fromStr, false);
+      const toISO   = timeRangeISO(toStr, true);
+
+      if (new Date(fromISO) > new Date(toISO)) {
+        return setAuthStatus("From date must be on/before To date", false);
+      }
+
+      const calId = document.getElementById("calendarId").value.trim();
+      const url = new URL("https://www.googleapis.com/calendar/v3/calendars/" + encodeURIComponent(calId) + "/events");
+      url.searchParams.set("singleEvents","true");
+      url.searchParams.set("orderBy","startTime");
+      url.searchParams.set("timeMin", fromISO);
+      url.searchParams.set("timeMax", toISO);
+      url.searchParams.set("maxResults","2500");
+
+      logDebug("Calendar fetch", { range: { fromStr, toStr }, url: url.toString() });
+
+      const res = await fetch(url, { headers:{ Authorization:"Bearer " + accessToken }});
+      if (!res.ok) return setAuthStatus("Calendar API error " + res.status, false);
+      const data = await res.json();
+
+      const items = (data.items||[]).slice().sort((a,b)=>{
+        const aa = a.start?.dateTime || a.start?.date;
+        const bb = b.start?.dateTime || b.start?.date;
+        return new Date(bb) - new Date(aa);
+      });
+
+      const sel = document.getElementById("eventPick");
+      sel.innerHTML = '<option value="">— Select event (optional) —</option>';
+
+      items.forEach(ev=>{
+        const title = ev.summary || "(no title)";
+        const date = ev.start?.date || ev.start?.dateTime?.slice(0,10) || "";
+        const opt = document.createElement("option");
+        opt.value = title;
+        opt.textContent = `${title} — ${date}`;
+        opt.dataset.date = date;
+        sel.appendChild(opt);
+      });
+
+      setAuthStatus("Loaded " + items.length + " events", true);
+
+      // Auto-select most recent event + auto-apply "Use selected event"
+      if (items.length > 0) {
+        sel.selectedIndex = 1; // first real option after the placeholder
+        useSelectedEvent();
+      }
+    }
+
+    // ---------- DATE FORMAT ----------
+    function toDMY(iso) {
+      if (!iso) return "";
+      const [y,m,d] = iso.split("-");
+      return `${d}-${m}-${y}`;
+    }
+
+    // ---------- CALC ----------
+    function minutesFromHHMM(v) {
+      if (!v) return null;
+      const [hh,mm] = v.split(":").map(Number);
+      if (Number.isNaN(hh) || Number.isNaN(mm)) return null;
+      return hh*60 + mm;
+    }
+
+    function fmtHours(mins) {
+      if (mins==null || isNaN(mins)) return "—";
+      const h = Math.floor(mins/60);
+      const m = mins%60;
+      return `${h}h ${String(m).padStart(2,"0")}m`;
+    }
+
+    function fmtMoney(p) {
+      if (p==null || isNaN(p)) return "—";
+      return "£"+p.toFixed(2);
+    }
+
+    function updateDayTypeLabel(full, finish) {
+      const el = document.getElementById("dayTypeLabel");
+      if (!el) return;
+      if (!full && !finish) el.textContent = "Day type: Field day";
+      else if (full) el.textContent = "Day type: Full office/admin day";
+      else el.textContent = "Day type: Office-finish day";
+    }
+
+    function calc() {
+      setCalcStatus("", false);
+
+      const leaveVal = document.getElementById("leaveTime").value || "07:45";
+      const rtVal = document.getElementById("returnTime").value;
+
+      const leaveMin = minutesFromHHMM(leaveVal);
+      let endMin = minutesFromHHMM(rtVal);
+
+      if (leaveMin === null) {
+        setCalcStatus("Invalid leave time.", true);
+        return null;
+      }
+      if (endMin === null) {
+        setCalcStatus("Please enter a return time.", true);
+        return null;
+      }
+
+      if (endMin < leaveMin) endMin += 1440;
+
+      const full = document.getElementById("fullOfficeDay").checked;
+      const finish = !full && document.getElementById("officeFinishDay").checked;
+
+      let effectiveEnd = endMin;
+      if (finish) effectiveEnd = Math.min(endMin, CORE_END);
+
+      const totalWorked = Math.max(0, effectiveEnd - leaveMin);
+
+      let rawPre9=0, rawPost17=0, rawCore=0;
+
+      if (leaveMin < GRACE_END)
+        rawPre9 = Math.max(0, Math.min(effectiveEnd, GRACE_END) - leaveMin);
+
+      if (effectiveEnd > GRACE_END) {
+        rawCore = Math.max(0,
+          Math.min(effectiveEnd, CORE_END) - Math.max(leaveMin, GRACE_END)
+        );
+      }
+
+      if (!finish && effectiveEnd > CORE_END)
+        rawPost17 = Math.max(0, effectiveEnd - CORE_END);
+
+      let pre9OT  = rawPre9;
+      let post17OT = rawPost17;
+
+      if (full) {
+        pre9OT = 0;
+        post17OT = 0;
+      } else if (finish) {
+        pre9OT = Math.max(0, rawPre9 - 15);
+        post17OT = 0;
+      } else {
+        if (pre9OT > 0) pre9OT = Math.max(0, pre9OT - 15);
+        if (post17OT > 0) post17OT = Math.max(0, post17OT - 15);
+      }
+
+      const baseRate = parseFloat((document.getElementById("baseRate").value || "").replace(",", ".")) || 0;
+
+      // OT Due uses payable overtime minutes (after deductions)
+      const payableOT = pre9OT + post17OT;
+      const otDue = (payableOT / 60) * baseRate;
+
+      document.getElementById("allHours").textContent   = fmtHours(totalWorked);
+      document.getElementById("graceHours").textContent = fmtHours(pre9OT);
+      document.getElementById("coreHours").textContent  = fmtHours(rawCore);
+      document.getElementById("otHours").textContent    = fmtHours(post17OT);
+      document.getElementById("otBase").textContent     = fmtMoney(otDue);
+
+      updateDayTypeLabel(full, finish);
+
+      setCalcStatus("Calculated.", false);
+
+      return {
+        totalWorked,
+        totalOTPayable: payableOT,
+        otDue
+      };
+    }
+
+    // ---------- LOG ----------
+    function updateLogCount() {
+      const rows = [...document.querySelectorAll("#logBody tr")].filter(r=>!r.id);
+      document.getElementById("logCount").textContent =
+        rows.length===1 ? "1 entry" : `${rows.length} entries`;
+    }
+
+    function mkBtn(label, cls) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = cls || "";
+      b.textContent = label;
+      b.style.border = "1px solid var(--border)";
+      b.style.borderRadius = "8px";
+      b.style.padding = "6px 10px";
+      return b;
+    }
+
+    function addPlaceholder() {
+      const tb = document.getElementById("logBody");
+      const tr = document.createElement("tr");
+      tr.id = "placeholderRow";
+      const td = document.createElement("td");
+      td.colSpan = 8;
+      td.className = "note";
+      td.textContent = "No entries yet — add one above.";
+      tr.appendChild(td);
+      tb.appendChild(tr);
+    }
+
+    function addRowFromData(item) {
+      const tbody = document.getElementById("logBody");
+      const tr = document.createElement("tr");
+
+      const tdAct = document.createElement("td");
+      const del = mkBtn("Delete","danger");
+      del.onclick = () => {
+        tr.remove();
+        if (!tbody.querySelector("tr")) addPlaceholder();
+        updateLogCount();
+        saveState();
+      };
+      tdAct.appendChild(del);
+      tr.appendChild(tdAct);
+
+      [
+        item.dateDMY,
+        item.job,
+        item.leaveTime,
+        item.returnTime,
+        item.totalWorked,
+        item.totalOT,
+        item.otDue
+      ].forEach(v => {
+        const td=document.createElement("td");
+        td.textContent=v;
+        tr.appendChild(td);
+      });
+
+      tbody.appendChild(tr);
+    }
+
+    function addRow() {
+      const r = calc();
+      if (!r) return;
+
+      const tbody = document.getElementById("logBody");
+      const ph = document.getElementById("placeholderRow");
+      if (ph) ph.remove();
+
+      const isoDate = document.getElementById("date").value;
+      const item = {
+        dateDMY: toDMY(isoDate),
+        job: document.getElementById("jobRef").value || "",
+        leaveTime: document.getElementById("leaveTime").value || "07:45",
+        returnTime: document.getElementById("returnTime").value || "",
+        totalWorked: fmtHours(r.totalWorked),
+        // Total Overtime column now reflects payable OT (after 15m deductions),
+        // which matches the OT Due calculation.
+        totalOT: fmtHours(r.totalOTPayable),
+        otDue: fmtMoney(r.otDue)
+      };
+
+      addRowFromData(item);
+      updateLogCount();
+      saveState();
+    }
+
+    function serializeLog() {
+      const rows=[...document.querySelectorAll("#logBody tr")].filter(r=>!r.id);
+      return rows.map(r=>{
+        return {
+          dateDMY: r.children[1].textContent.trim(),
+          job:     r.children[2].textContent.trim(),
+          leaveTime: r.children[3].textContent.trim(),
+          returnTime: r.children[4].textContent.trim(),
+          totalWorked: r.children[5].textContent.trim(),
+          totalOT: r.children[6].textContent.trim(),
+          otDue: r.children[7].textContent.trim()
+        };
+      });
+    }
+
+    function restoreLog(items) {
+      const tbody=document.getElementById("logBody");
+      tbody.innerHTML="";
+      if (!items?.length) { addPlaceholder(); updateLogCount(); return; }
+      items.forEach(addRowFromData);
+      updateLogCount();
+    }
+
+    function clearLog() {
+      if (!confirm("Clear all log entries?")) return;
+      const tbody=document.getElementById("logBody");
+      tbody.innerHTML="";
+      addPlaceholder();
+      updateLogCount();
+      saveState();
+    }
+
+    // ---------- EXPORT PDF ----------
+    function parseHM(s){
+      if (!s) return 0;
+      const m=s.match(/(\d+)h\s*(\d+)m/i);
+      if (!m) return 0;
+      return parseInt(m[1])*60 + parseInt(m[2]);
+    }
+    function parseMoney(s){
+      if (!s) return 0;
+      const n=s.replace(/[^0-9.\-]/g,"");
+      return parseFloat(n||"0");
+    }
+
+    function buildDocHtmlFromLog(){
+      const rows=[...document.querySelectorAll("#logBody tr")].filter(r=>!r.id);
+      let totWorked=0, totOT=0, totDue=0;
+
+      const bodyHtml = rows.map(r=>{
+        const d=r.children[1].textContent.trim();
+        const job=r.children[2].textContent.trim();
+        const left=r.children[3].textContent.trim();
+        const ret=r.children[4].textContent.trim();
+        const tw=r.children[5].textContent.trim();
+        const tot=r.children[6].textContent.trim();
+        const due=r.children[7].textContent.trim();
+
+        totWorked+=parseHM(tw);
+        totOT+=parseHM(tot);
+        totDue+=parseMoney(due);
+
+        return `
+          <tr>
+            <td>${d}</td>
+            <td>${job}</td>
+            <td>${left}</td>
+            <td>${ret}</td>
+            <td class="tc">${tw}</td>
+            <td class="tc">${tot}</td>
+            <td class="tr">${due}</td>
+          </tr>`;
+      }).join("");
+
+      const dates = rows.map(r=>r.children[1].textContent.trim()).filter(Boolean);
+      const first = dates[0] || "";
+      const last  = dates[dates.length-1] || "";
+      const title = `Overtime Logs between ${first} and ${last}`;
+
+      const css = `
+        <style>
+          @page { size: A4 landscape; margin: 1.6cm; }
+          body { font-family: Calibri, Arial, sans-serif; font-size: 12pt; }
+          h1 { font-size: 18pt; margin: 0 0 8pt 0; }
+          h2 { font-size: 14pt; margin-top: 20pt; }
+          table { border-collapse: collapse; width: 100%; margin-top: 12pt; }
+          th, td {
+            border: 1px solid #ccc;
+            padding: 6pt;
+            vertical-align: top;
+          }
+          th { background: #efefef; font-weight: bold; }
+          .tc { text-align: center; }
+          .tr { text-align: right; }
+          .totals td { background: #f7f7f7; }
+          ul { margin: 6pt 0 12pt 24pt; padding: 0; }
+        </style>
+      `;
+
+      const totalsRow = rows.length ? `
+        <tr class="totals">
+          <td></td><td><b>Totals</b></td><td></td><td></td>
+          <td class="tc"><b>${fmtHours(totWorked)}</b></td>
+          <td class="tc"><b>${fmtHours(totOT)}</b></td>
+          <td class="tr"><b>£${totDue.toFixed(2)}</b></td>
+        </tr>` : "";
+
+      const employee = (document.getElementById("employeeName").value || "Frazer").trim();
+
+      return `
+        <!doctype html>
+        <html>
+        <head><meta charset="utf-8">${css}<title>${title}</title></head>
+        <body>
+          <h1>${title}</h1>
+          <p><b>Employee:</b> ${employee}</p>
+
+          <h2>How the calculations work</h2>
+          <ul>
+            <li>Time before 09:00 and after 17:00 counts as overtime, based on recorded leave and return times.</li>
+            <li><b>Total overtime shown in this report already includes the 15 minute deduction(s)</b> (pre-09:00 and/or post-17:00) so it aligns with <b>OT Due</b>.</li>
+            <li>On office-finish days, pre-09:00 overtime (after a 15 minute deduction) is kept, but there is no overtime after 17:00.</li>
+            <li>Overtime is shown at the base rate (e.g. £15.70/hr).</li>
+          </ul>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Job / Location</th>
+                <th>Time left</th>
+                <th>Time returned</th>
+                <th>Total worked</th>
+                <th>Total overtime</th>
+                <th>OT Due</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${bodyHtml || '<tr><td colspan="7">No entries</td></tr>'}
+              ${totalsRow}
+            </tbody>
+          </table>
+
+          <h2>Authorisation</h2>
+          <p><b>Authorised by:</b> _____________________<br>
+          <b>Date:</b> _____________________</p>
+        </body>
+        </html>
+      `;
+    }
+
+    function exportPdf(){
+      const rows=[...document.querySelectorAll("#logBody tr")].filter(r=>!r.id);
+      if (!rows.length) return alert("No rows to export.");
+      const html=buildDocHtmlFromLog();
+      const w=window.open("");
+      w.document.write(html);
+      w.document.close();
+      w.onload = ()=>setTimeout(()=>w.print(),250);
+    }
+
+    // ---------- API KEY PANEL ----------
+    function refreshApiKeyStatus(){
+      const key=localStorage.getItem(OPENAI_KEY_STORAGE);
+      document.getElementById("apiKeyStatus").textContent =
+        key ? "API key stored (shared across AVD tools)." : "No API key stored yet.";
+    }
+    function handleSaveApiKey(){
+      const v=document.getElementById("apiKeyInput").value.trim();
+      if (!v) return alert("Enter key first");
+      localStorage.setItem(OPENAI_KEY_STORAGE,v);
+      document.getElementById("apiKeyInput").value="";
+      refreshApiKeyStatus();
+    }
+    function handleClearApiKey(){
+      localStorage.removeItem(OPENAI_KEY_STORAGE);
+      refreshApiKeyStatus();
+    }
+
+    async function testOpenAiCall(){
+      const key = localStorage.getItem(OPENAI_KEY_STORAGE);
+      if (!key) return alert("No OpenAI key saved yet.");
+      document.getElementById("openAiStatus").textContent = "Testing OpenAI call…";
+      try{
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + key },
+          body: JSON.stringify({
+            model: "gpt-4.1-mini",
+            messages: [
+              { role:"system", content:"You are a concise assistant." },
+              { role:"user", content:"Reply with: OK" }
+            ],
+            temperature: 0
+          })
+        });
+        if (!res.ok) {
+          const txt = await res.text().catch(()=> "");
+          logDebug("OpenAI test error body", txt);
+          throw new Error("OpenAI error " + res.status);
+        }
+        const data = await res.json();
+        const out = data?.choices?.[0]?.message?.content?.trim() || "(no content)";
+        document.getElementById("openAiStatus").textContent = "OpenAI test OK: " + out;
+      }catch(e){
+        document.getElementById("openAiStatus").textContent = "OpenAI test failed: " + (e.message || String(e));
+      }
+    }
+
+    // ---------- AI Debugger ----------
+    function initAiDebuggerDefaults(){
+      const modelSel = document.getElementById("aiModel");
+      modelSel.innerHTML = "";
+      MODEL_CANDIDATES.forEach(m=>{
+        const opt=document.createElement("option");
+        opt.value=m;
+        opt.textContent=m;
+        modelSel.appendChild(opt);
+      });
+      modelSel.value = MODEL_CANDIDATES[0] || "gpt-4.1-mini";
+
+      document.getElementById("aiSystemPrompt").value =
+`You are an AI assistant helping to improve "Jobs/Reports" text for AV engineers.
+
+Rules (Be Strict):
+- Do not invent facts.
+- Keep all operational details: dates, locations, access, key people, kit models, constraints, risks.
+- Remove waffle and repetition.
+- Output should be clean and ready to paste into a Job/Report.
+
+Return only the improved text. No commentary.`;
+
+      document.getElementById("aiUserInput").value =
+`Job/Report:
+Arrived on site, customer said projector keeps dropping signal. HDMI run is long. Tested with spare lead. Suspect wall plate or extender. Need revisit with proper tester and spare TX/RX.
+Access: key safe by side door.`;
+    }
+
+    function setAiDebuggerStatus(msg, isErr){
+      const el=document.getElementById("aiDebuggerStatus");
+      el.textContent = msg || "";
+      el.className = isErr ? "small-note danger-text" : "small-note";
+      if (msg) logDebug("AI-DEBUGGER: " + msg + (isErr ? " [ERROR]" : ""));
+    }
+
+    async function runAiDebugger(){
+      setAiDebuggerStatus("", false);
+
+      const key = localStorage.getItem(OPENAI_KEY_STORAGE);
+      if (!key) return setAiDebuggerStatus("No OpenAI key stored. Save it in the API key panel first.", true);
+
+      const model = document.getElementById("aiModel").value;
+      const temp  = parseFloat((document.getElementById("aiTemperature").value || "0.2").replace(",", ".")) || 0.2;
+      const systemPrompt = document.getElementById("aiSystemPrompt").value || "";
+      const userInput = document.getElementById("aiUserInput").value || "";
+
+      if (!userInput.trim()) return setAiDebuggerStatus("User input is empty.", true);
+
+      document.getElementById("runAiDebuggerBtn").disabled = true;
+      setAiDebuggerStatus("Running…", false);
+
+      try{
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method:"POST",
+          headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + key },
+          body: JSON.stringify({
+            model,
+            temperature: temp,
+            messages: [
+              { role:"system", content: systemPrompt },
+              { role:"user", content: userInput }
+            ]
+          })
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(()=> "");
+          logDebug("AI Debugger OpenAI error body", txt);
+          throw new Error("OpenAI error " + res.status);
+        }
+
+        const data = await res.json();
+        const out = data?.choices?.[0]?.message?.content || "";
+        if (!out.trim()) throw new Error("Empty response from model.");
+        document.getElementById("aiOutput").value = out;
+        setAiDebuggerStatus("Done.", false);
+      }catch(e){
+        setAiDebuggerStatus(e.message || String(e), true);
+      }finally{
+        document.getElementById("runAiDebuggerBtn").disabled = false;
+      }
+    }
+
+    async function copyTextFrom(id){
+      const txt = (document.getElementById(id).value || "").trim();
+      if (!txt) return alert("Nothing to copy.");
+      try { await navigator.clipboard.writeText(txt); alert("Copied."); }
+      catch { alert("Copy failed. Select and copy manually."); }
+    }
+
+    // ---------- Copy full index.html ----------
+    async function getIndexHtmlSource() {
+      const request = new Request("index.html", { cache: "no-cache" });
+      try {
+        const res = await fetch(request);
+        if (!res.ok) throw new Error("Failed to fetch index.html (" + res.status + ")");
+        return await res.text();
+      } catch (e) {
+        const dt = document.doctype;
+        const doctype = dt
+          ? "<!DOCTYPE " + dt.name + (dt.publicId ? " PUBLIC \"" + dt.publicId + "\"" : "") +
+            (dt.systemId ? " \"" + dt.systemId + "\"" : "") + ">\n"
+          : "<!DOCTYPE html>\n";
+        return doctype + document.documentElement.outerHTML;
+      }
+    }
+
+    async function copyFullPageHtml() {
+      const htmlString = await getIndexHtmlSource();
+      const repl = document.getElementById("replacementIndexOutput");
+      if (repl) repl.value = htmlString;
+
+      try {
+        if (navigator.clipboard && typeof ClipboardItem !== "undefined" && navigator.clipboard.write) {
+          const plainBlob = new Blob([htmlString], { type: "text/plain" });
+          const htmlBlob  = new Blob([htmlString], { type: "text/html" });
+          await navigator.clipboard.write([ new ClipboardItem({ "text/plain": plainBlob, "text/html": htmlBlob }) ]);
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(htmlString);
+        } else {
+          throw new Error("Clipboard API unavailable");
+        }
+        alert("Full index.html copied to clipboard.");
+      } catch (e) {
+        alert("Could not copy automatically. Use the 'Replacement index.html output' panel to copy manually.");
+      }
+    }
+
+    // ---------- State ----------
+    function saveState(){
+      const data={
+        log: serializeLog(),
+        baseRate: document.getElementById("baseRate").value,
+        calendarId: document.getElementById("calendarId").value,
+        employeeName: (document.getElementById("employeeName").value || "Frazer").trim()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function loadState(){
+      const raw=localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      let data=null;
+      try { data=JSON.parse(raw); } catch { return; }
+
+      document.getElementById("baseRate").value = data.baseRate || "15.70";
+      document.getElementById("calendarId").value = data.calendarId ||
+        "bb14db72acb2ffd4230316960d02103fa66e54901522ff7b8113eec682f6d42e@group.calendar.google.com";
+      document.getElementById("employeeName").value = data.employeeName || "Frazer";
+
+      if (Array.isArray(data.log)) restoreLog(data.log);
+    }
+
+    // ---------- INIT ----------
+    window.addEventListener("DOMContentLoaded", () => {
+      applyToolMetadata();
+      logDebug("DOMContentLoaded");
+
+      ensureCalendarRangeInputs();
+      initAuth(); // init early; still safe if google lib not ready
+
+      // Ensure advanced range is collapsed by default each refresh
+      const adv = document.getElementById("advancedRangeDetails");
+      if (adv) adv.open = false;
+
+      // default range status text
+      const def = defaultCalendarRange();
+      const rs = document.getElementById("rangeStatus");
+      if (rs) rs.textContent = `Using default range: last 14 days (${def.from} → ${def.to})`;
+
+      document.getElementById("signin").onclick = signIn;
+
+      // Advanced range controls
+      const applyBtn = document.getElementById("applyRangeBtn");
+      const resetBtn = document.getElementById("resetRangeBtn");
+
+      if (applyBtn) applyBtn.onclick = async () => {
+        ensureCalendarRangeInputs();
+        USE_CUSTOM_RANGE = true;
+        const fromStr = document.getElementById("fromDate").value;
+        const toStr = document.getElementById("toDate").value;
+        const rs2 = document.getElementById("rangeStatus");
+        if (rs2) rs2.textContent = `Using custom range: ${fromStr} → ${toStr}`;
+        logDebug("Custom calendar range applied", { fromStr, toStr });
+
+        // Re-fetch immediately so the dropdown updates without extra clicks
+        try { await fetchEvents(); } catch(e) { logDebug("fetchEvents after apply range failed", String(e)); }
+      };
+
+      if (resetBtn) resetBtn.onclick = async () => {
+        USE_CUSTOM_RANGE = false;
+        const d = defaultCalendarRange();
+        document.getElementById("fromDate").value = d.from;
+        document.getElementById("toDate").value = d.to;
+        const rs3 = document.getElementById("rangeStatus");
+        if (rs3) rs3.textContent = `Using default range: last 14 days (${d.from} → ${d.to})`;
+        logDebug("Calendar range reset to default (last 14 days)", d);
+
+        // Re-fetch immediately so the dropdown updates without extra clicks
+        try { await fetchEvents(); } catch(e) { logDebug("fetchEvents after reset range failed", String(e)); }
+      };
+
+      // If user manually changes selection, apply immediately
+      document.getElementById("eventPick").addEventListener("change", useSelectedEvent);
+
+      document.getElementById("calcBtn").onclick = calc;
+      document.getElementById("addRowBtn").onclick = addRow;
+      document.getElementById("clearLog").onclick = clearLog;
+      document.getElementById("exportPdf").onclick = exportPdf;
+
+      // Version pill copy
+      document.getElementById("copyVersionBtn").onclick = copyFullPageHtml;
+
+      // API panel
+      document.getElementById("saveApiKeyBtn").onclick = handleSaveApiKey;
+      document.getElementById("clearApiKeyBtn").onclick = handleClearApiKey;
+      document.getElementById("testOpenAiBtn").onclick = testOpenAiCall;
+      refreshApiKeyStatus();
+
+      // AI Debugger
+      initAiDebuggerDefaults();
+      document.getElementById("runAiDebuggerBtn").onclick = runAiDebugger;
+      document.getElementById("copyAiOutputBtn").onclick = () => copyTextFrom("aiOutput");
+
+      // Replacement output copy
+      document.getElementById("copyReplacementBtn").onclick = () => copyTextFrom("replacementIndexOutput");
+
+      // Load persisted tool state
+      loadState();
+      updateDayTypeLabel(false,false);
+
+      // Persist calendarId/employee when changed
+      document.getElementById("calendarId").addEventListener("change", saveState);
+      document.getElementById("employeeName").addEventListener("change", saveState);
+
+      setAuthStatus("Not signed in", true);
+    });
+  </script>
+</body>
+</html>

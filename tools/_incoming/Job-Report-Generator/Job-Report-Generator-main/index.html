@@ -1,0 +1,2145 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Job Report Generator</title>
+  <meta name="color-scheme" content="light dark" />
+  <!-- Google OAuth client ID -->
+  <meta
+    name="google-oauth-client-id"
+    content="105230737516-l8tlnck4idde83pjetrotobpt8borvts.apps.googleusercontent.com"
+  />
+
+  <style>
+    :root {
+      --bg:#0f172a; --card:#020617; --panel:#020617; --border:#1e293b;
+      --text:#e5e7eb; --muted:#94a3b8; --accent:#38bdf8; --accent-soft:rgba(56,189,248,0.12);
+      --danger:#ef4444;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg:#f8fafc; --card:#ffffff; --panel:#ffffff; --border:#e5e7eb;
+        --text:#020617; --muted:#475569; --accent:#0ea5e9; --accent-soft:rgba(14,165,233,0.10);
+        --danger:#b91c1c;
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(900px 600px at 5% 0%, rgba(56,189,248,0.10), transparent 55%),
+        radial-gradient(800px 600px at 95% 0%, rgba(129,140,248,0.12), transparent 50%),
+        var(--bg);
+      color: var(--text);
+    }
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      padding: 18px 18px 20px;
+      box-shadow: 0 18px 40px rgba(15,23,42,0.40);
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 26px;
+      letter-spacing: .02em;
+      display:flex;
+      align-items:baseline;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .version {
+      font-size:11px;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      color:var(--muted);
+    }
+    .muted { color: var(--muted); font-size: 14px; }
+
+    .pill {
+      display:inline-flex;align-items:center;gap:6px;
+      font-size:11px;padding:4px 10px;border-radius:999px;
+      border:1px solid var(--border);color:var(--muted);
+      text-decoration:none;
+      cursor:pointer;
+      background:transparent;
+      transition:border-color .12s ease, background .12s ease, color .12s ease,
+                 transform .06s ease, box-shadow .12s ease;
+    }
+    .pill:hover {
+      border-color:var(--accent);
+      color:var(--accent);
+      background:var(--accent-soft);
+      transform:translateY(-0.5px);
+      box-shadow:0 3px 8px rgba(15,23,42,0.35);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 10px;
+    }
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      display:block;
+    }
+    input, select, textarea {
+      width: 100%;
+      font-size: 14px;
+      padding: 9px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      resize: vertical;
+    }
+    textarea { min-height: 60px; }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+
+    .btn-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    button {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 8px 13px;
+      font-size: 14px;
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      background: var(--panel);
+      color: var(--text);
+      cursor:pointer;
+      transition: transform .06s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease;
+    }
+    button.primary {
+      border-color: var(--accent);
+      background: linear-gradient(180deg, var(--accent-soft), transparent);
+    }
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(15,23,42,0.5);
+    }
+
+    .section {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(15,23,42,0.6);
+      border: 1px dashed var(--border);
+    }
+    @media (prefers-color-scheme: light) {
+      .section { background: #f9fafb; }
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    details.contacts { margin-top:6px; }
+    details.contacts summary {
+      cursor:pointer;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .small-note { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+    #reportPreview {
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 12px;
+      background: var(--panel);
+      max-height: 420px;
+      overflow: auto;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    #reportPreview h1 { font-size: 16px; margin: 0 0 6px; }
+    #reportPreview h2 { font-size: 14px; margin: 8px 0 4px; }
+    #reportPreview p { margin: 2px 0 6px; }
+    #reportPreview table { border-collapse: collapse; width: 100%; margin: 4px 0 8px; }
+    #reportPreview th, #reportPreview td {
+      border: 1px solid var(--border);
+      padding: 4px 6px;
+      font-size: 12px;
+      vertical-align: top;
+    }
+
+    .file-list { font-size: 12px; color: var(--muted); margin-top:4px; }
+
+    /* Debug + API + calendar panels */
+    details.debug {
+      margin-top:12px;
+      border-radius:12px;
+      border:1px dashed var(--border);
+      padding:8px 10px;
+      background:rgba(15,23,42,0.4);
+      font-size:11px;
+    }
+    @media (prefers-color-scheme: light) {
+      details.debug { background:#f3f4f6; }
+    }
+    details.debug summary {
+      cursor:pointer;
+      font-size:12px;
+      color:var(--muted);
+    }
+    details.debug pre {
+      white-space:pre-wrap;
+      font-size:11px;
+      margin-top:4px;
+    }
+
+    details.api,
+    details.calendar-settings {
+      margin-top:12px;
+      border-radius:12px;
+      border:1px dashed var(--border);
+      padding:6px 10px 10px;
+      background:rgba(15,23,42,0.4);
+      font-size:11px;
+    }
+    @media (prefers-color-scheme: light) {
+      details.api,
+      details.calendar-settings { background:#f3f4f6; }
+    }
+    details.api summary,
+    details.calendar-settings summary {
+      cursor:pointer;
+      font-size:12px;
+      color:var(--muted);
+    }
+  </style>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+        <div>
+          <h1>
+            Job Report Generator
+            <span class="version" id="versionPill">v0.10</span>
+          </h1>
+          <div class="muted">
+            Tap once to sign into Google, load jobs, AI-fills and tidies the report, then export to Word / email.
+          </div>
+        </div>
+        <a href="../index.html" class="pill">Frazer · AVD Tools</a>
+      </div>
+
+      <!-- Calendar selection -->
+      <div class="section">
+        <div class="section-title">Step 1 – Load jobs from calendar</div>
+        <div class="grid">
+          <div>
+            <label for="eventSelect">Events (default: last 14 days + today)</label>
+            <select id="eventSelect">
+              <option value="">Sign in to load events…</option>
+            </select>
+            <div id="authStatus" class="small-note">Status: Waiting for sign-in…</div>
+            <div id="aiStatus" class="small-note"></div>
+          </div>
+          <div style="align-self:end;">
+            <button id="signinBtn" class="primary" type="button">Sign into Google</button>
+            <div class="small-note">One tap. After that, events load &amp; AI runs automatically.</div>
+          </div>
+        </div>
+
+        <!-- Advanced date selection panel (override last 14 days) -->
+        <details class="debug" style="margin-top:8px;">
+          <summary>Advanced date range (override last 14 days)</summary>
+          <div class="small-note" style="margin-top:4px;">
+            By default the tool loads events from the last 14 days plus today. Override the date range here if needed.
+          </div>
+          <div class="grid" style="margin-top:6px;max-width:520px;">
+            <div>
+              <label for="startDateInput">Start date</label>
+              <input id="startDateInput" type="date" />
+            </div>
+            <div>
+              <label for="endDateInput">End date</label>
+              <input id="endDateInput" type="date" />
+            </div>
+          </div>
+          <div class="btn-row" style="margin-top:6px;">
+            <button type="button" id="applyDateRangeBtn">Apply date range</button>
+            <button type="button" id="clearDateRangeBtn">Clear override</button>
+          </div>
+          <div class="small-note">
+            Both dates required. Clear override to return to the automatic last-14-days window. (Custom range can include future events.)
+          </div>
+        </details>
+      </div>
+
+      <!-- Report fields -->
+      <div class="section">
+        <div class="section-title">Step 2 – Job details</div>
+        <div class="grid">
+          <div>
+            <label for="employee">Employee</label>
+            <input id="employee" placeholder="Derived from calendar ID if possible (defaults to Frazer)" />
+          </div>
+          <div>
+            <label for="jobType">Job type</label>
+            <select id="jobType">
+              <option value="">— Select job type —</option>
+              <option value="TCO">TCO (Technical Call Out)</option>
+              <option value="RTF">RTF (Return To Fix)</option>
+              <option value="Meeting / Consultation">Meeting / Consultation</option>
+              <option value="Recce">Recce</option>
+              <option value="Job / Installation">Job / Installation</option>
+            </select>
+            <div class="small-note">
+              AI will set this if it can. Otherwise you choose.
+            </div>
+          </div>
+          <div>
+            <label for="jobDate">Job date</label>
+            <input id="jobDate" type="date" />
+          </div>
+          <div>
+            <label for="jobAddress">Address / site</label>
+            <input id="jobAddress" placeholder="From title, location or description" />
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label for="jobDescription">Job description</label>
+          <textarea id="jobDescription"
+            placeholder="Very rough summary is fine – AI will tidy this into a clean paragraph."></textarea>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label for="techCheck">Tech check summary</label>
+          <textarea id="techCheck"
+            placeholder="TECH CHECK style notes from the event/linked docs."></textarea>
+          <div id="techLinks" class="small-note"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Step 3 – People &amp; time on site</div>
+        <div class="grid">
+          <div>
+            <label for="personsMet">Person(s) met</label>
+            <input id="personsMet" placeholder="Name(s) of contact(s) on site" />
+          </div>
+        </div>
+
+        <details class="contacts">
+          <summary>Contact details (optional)</summary>
+          <div class="grid" style="margin-top:6px;">
+            <div>
+              <label for="contactPhone">Phone</label>
+              <input id="contactPhone" />
+            </div>
+            <div>
+              <label for="contactEmail">Email</label>
+              <input id="contactEmail" />
+            </div>
+            <div>
+              <label for="contactAddress">Postal address (if office need to post something)</label>
+              <textarea id="contactAddress"></textarea>
+            </div>
+          </div>
+        </details>
+
+        <div id="timeOnSiteBlock" style="margin-top:10px; display:none;">
+          <label>Time on site (for TCO/RTF)</label>
+          <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;">
+            <div style="flex:1 1 160px;">
+              <label for="timeArrived" style="font-weight:500;font-size:12px;">Arrived</label>
+              <input id="timeArrived" type="time" />
+            </div>
+            <div style="flex:1 1 160px;">
+              <label for="timeLeft" style="font-weight:500;font-size:12px;">Left</label>
+              <input id="timeLeft" type="time" />
+            </div>
+            <div style="flex:1 1 200px;">
+              <label style="font-weight:500;font-size:12px;">Duration</label>
+              <input id="timeDuration" readonly />
+            </div>
+          </div>
+          <div class="small-note">Ignored for Job / Installation unless you want to note it.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Step 4 – Findings &amp; advisories</div>
+        <div class="grid">
+          <div>
+            <label for="findings">Findings</label>
+            <textarea id="findings"
+              placeholder="Short, rough sentences describing what you found – AI will tidy into a paragraph."></textarea>
+          </div>
+          <div>
+            <label for="howLeft">How things have been left</label>
+            <textarea id="howLeft"
+              placeholder="Quick bullet-style notes (one per line) – AI will turn this into a neat paragraph."></textarea>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <label for="advisories">Advisories</label>
+          <textarea id="advisories"
+            placeholder="Future improvements / risks – again, just rough bullets, AI will tidy."></textarea>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Step 5 – Photos / videos</div>
+        <div>
+          <label for="mediaFiles">Upload photos / videos</label>
+          <input id="mediaFiles" type="file" accept="image/*,video/*" multiple />
+          <div class="small-note">
+            Files stay local in your browser. They can’t be emailed automatically from here,
+            but they’ll be listed in the report so you know what to attach.
+          </div>
+          <div id="mediaList" class="file-list"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Step 6 – Generate, check &amp; send</div>
+        <div class="btn-row">
+          <button id="generateBtn" class="primary" type="button">Generate report</button>
+          <button id="viewBtn" type="button">View report</button>
+          <button id="copyBtn" type="button">Copy report text</button>
+          <button id="downloadDocBtn" type="button">Download Word (.doc)</button>
+          <button id="sendBtn" type="button">Send (opens email)</button>
+        </div>
+        <div class="small-note">
+          “Send” opens your email client addressed to Neil, Mark &amp; David with the report text.
+          Attach the Word doc + photos/videos manually.
+        </div>
+
+        <div style="margin-top:10px;">
+          <label>Report preview</label>
+          <div id="reportPreview">No report generated yet.</div>
+        </div>
+      </div>
+
+      <!-- Debug panel -->
+      <details class="debug">
+        <summary>Debug panel</summary>
+        <pre id="debugLog">(empty)</pre>
+      </details>
+
+      <!-- AI Debugger panel -->
+      <details class="debug">
+        <summary>AI Debugger (Be Strict)</summary>
+        <div class="small-note" style="margin-top:4px;">
+          Sends the full current index.html, internal debug log, selected event payload (if any), and captured browser/console errors.
+          It will either propose a minimal code fix with a full replacement index, or explain why the issue is external.
+        </div>
+        <div style="margin-top:6px;">
+          <button type="button" id="runAiDebuggerBtn">Run AI Debugger (index + logs)</button>
+        </div>
+
+        <div class="small-note" style="margin-top:10px;">
+          What isn’t working? (This is included in the AI Debugger payload.)
+        </div>
+        <textarea id="aiDebuggerUserIssue" rows="4" style="margin-top:4px;" placeholder="e.g. Future jobs don’t appear when I set an advanced date range..."></textarea>
+
+        <div class="small-note" style="margin-top:10px;">
+          Optional: paste any extra console messages here if you’ve copied them from DevTools:
+        </div>
+        <textarea id="consoleErrorsInput" rows="4" style="margin-top:4px;"></textarea>
+
+        <div class="small-note" style="margin-top:10px;">
+          AI Debugger output (summary, reasons, and outline of changes):
+        </div>
+        <pre id="aiDebuggerOutput"></pre>
+      </details>
+
+      <!-- Replacement Index panel -->
+      <details class="debug">
+        <summary>Replacement index (from AI Debugger)</summary>
+        <div class="small-note" style="margin-top:4px;">
+          If the AI Debugger can fix the problem in code, it will provide a complete replacement index.html here.
+          If the issue is external, this area will contain a prompt you can paste into ChatGPT for deeper help.
+        </div>
+        <pre id="replacementIndexOutput">(none yet)</pre>
+      </details>
+
+      <!-- Calendar / advanced settings -->
+      <details class="calendar-settings">
+        <summary>Calendar / advanced (Calendar ID)</summary>
+        <div class="small-note" style="margin-top:4px;">
+          Calendar ID used for loading jobs. Normally you won’t need to change this.
+        </div>
+        <div style="margin-top:6px;max-width:480px;">
+          <label for="calendarId">Calendar ID</label>
+          <input
+            id="calendarId"
+            value="bb14db72acb2ffd4230316960d02103fa66e54901522ff7b8113eec682f6d42e@group.calendar.google.com"
+          />
+          <div class="small-note">
+            Same calendar as your other tools. Editing this affects which jobs are loaded.
+          </div>
+        </div>
+      </details>
+
+      <!-- API KEY PANEL (hidden by default) -->
+      <details class="api">
+        <summary>API key (OpenAI) – hidden by default</summary>
+        <div class="small-note" style="margin-top:4px;">
+          Stored locally in <code>localStorage['avd_job_report_openai_key']</code>. Never sent anywhere except OpenAI’s API.
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap;">
+          <input id="apiKeyInput" type="password" placeholder="sk-..." style="flex:1 1 220px;max-width:380px;">
+          <button type="button" id="saveApiKeyBtn">Save</button>
+          <button type="button" id="clearApiKeyBtn">Forget</button>
+        </div>
+        <div id="apiKeyStatus" class="small-note"></div>
+      </details>
+    </div>
+  </div>
+
+  <script>
+    // ======================
+    //  CONFIG / CONSTANTS
+    // ======================
+    const APP_VERSION = "v0.10";
+    const VERSION_GUARD_KEY = "avd_tool_job_report_generator_last_version";
+
+    const CLIENT_ID = "105230737516-l8tlnck4idde83pjetrotobpt8borvts.apps.googleusercontent.com";
+    const SCOPES   = "https://www.googleapis.com/auth/calendar.readonly";
+
+    const OPENAI_MODEL = "gpt-4.1-mini";
+    const OPENAI_KEY_STORAGE = "avd_job_report_openai_key";
+
+    const DEBUG_MODEL_CANDIDATES = ["gpt-5.2","gpt-5.1","gpt-5-mini","gpt-4.1-mini"];
+
+    let accessToken = null;
+    let tokenClient = null;
+    let currentEvents = [];
+    let lastReportText = "";
+
+    let customDateRange = { start: null, end: null }; // optional override for event date window
+
+    // Captured logs for AI Debugger
+    let browserErrorLog = [];
+    let consoleLogBuffer = [];
+
+    // ========== DEBUG ==========
+    function logDebug(msg) {
+      try {
+        const el = document.getElementById("debugLog");
+        if (!el) return;
+        const ts = new Date().toISOString().replace("T"," ").slice(0,19);
+        el.textContent += "[" + ts + "] " + msg + "\n";
+        el.scrollTop = el.scrollHeight;
+      } catch (e) {
+        console && console.warn && console.warn("debugLog error", e);
+      }
+    }
+
+    function setStatus(msg, ok) {
+      const el = document.getElementById("authStatus");
+      if (!el) return;
+      el.textContent = "Status: " + msg;
+      el.style.color = ok === false ? "var(--danger)" : "";
+      logDebug("AUTH: " + msg);
+    }
+
+    function setAiStatus(msg, ok) {
+      const el = document.getElementById("aiStatus");
+      if (!el) return;
+      el.textContent = msg;
+      el.style.color = ok === false ? "var(--danger)" : "";
+      if (msg) logDebug("AI: " + msg);
+    }
+
+    // ======================
+    //  GOOGLE AUTH & EVENTS
+    // ======================
+    function initAuth() {
+      if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+        logDebug("initAuth: Google auth library not ready yet.");
+        return;
+      }
+      tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPES,
+        prompt: "",
+        callback: function(resp) {
+          if (resp && resp.access_token) {
+            accessToken = resp.access_token;
+            setStatus("Signed in. Loading events…", true);
+            loadRecentEvents().catch(err => {
+              logDebug("loadRecentEvents error after sign-in: " + (err && err.message ? err.message : String(err)));
+            });
+          } else {
+            setStatus("Sign-in failed.", false);
+          }
+        }
+      });
+      logDebug("initAuth: tokenClient initialised.");
+    }
+
+    function signInManual() {
+      logDebug("signInManual: clicked.");
+      if (!tokenClient) initAuth();
+      if (!tokenClient) {
+        setStatus("Google auth not ready (library not loaded).", false);
+        return;
+      }
+      tokenClient.requestAccessToken();
+    }
+
+    function getEventStartDate(ev) {
+      if (!ev || !ev.start) return null;
+      if (ev.start.date) return new Date(ev.start.date + "T00:00:00Z");
+      if (ev.start.dateTime) return new Date(ev.start.dateTime);
+      return null;
+    }
+
+    function extractPrimaryDate(ev) {
+      if (!ev || !ev.start) return "";
+      if (ev.start.date) return ev.start.date;
+      if (ev.start.dateTime) return ev.start.dateTime.slice(0, 10);
+      return "";
+    }
+
+    async function loadRecentEvents() {
+      logDebug("loadRecentEvents: start.");
+      if (!accessToken) {
+        setStatus("No access token yet.", false);
+        return;
+      }
+
+      const calId = (document.getElementById("calendarId").value || "primary").trim();
+
+      const now = new Date();
+      let start;
+      let end;
+
+      const isCustom = !!(customDateRange.start && customDateRange.end);
+
+      if (isCustom) {
+        start = new Date(customDateRange.start);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(customDateRange.end);
+        end.setHours(23, 59, 59, 999);
+        logDebug("Using custom date range: " + start.toISOString().slice(0,10) + " to " + end.toISOString().slice(0,10));
+      } else {
+        end = new Date(now);
+        end.setHours(23, 59, 59, 999);
+        start = new Date(now);
+        start.setDate(start.getDate() - 14);
+        start.setHours(0, 0, 0, 0);
+        logDebug("Using default date range: last 14 days + today.");
+      }
+
+      const url = new URL(
+        "https://www.googleapis.com/calendar/v3/calendars/" +
+        encodeURIComponent(calId) +
+        "/events"
+      );
+
+      url.searchParams.set("singleEvents", "true");
+      url.searchParams.set("orderBy", "startTime");
+      url.searchParams.set("timeMin", start.toISOString());
+      url.searchParams.set("timeMax", end.toISOString());
+      url.searchParams.set("maxResults", "250");
+
+      logDebug("loadRecentEvents URL: " + url.toString());
+
+      const res = await fetch(url.toString(), {
+        headers: { "Authorization": "Bearer " + accessToken }
+      });
+
+      if (!res.ok) {
+        setStatus("Calendar API error " + res.status, false);
+        logDebug("Calendar API error " + res.status);
+        return;
+      }
+
+      const data = await res.json();
+      const all = data.items || [];
+      const nowRef = new Date();
+
+      // IMPORTANT:
+      // - Default mode behaves like "recent" and filters out future events.
+      // - Custom mode must allow future events (do NOT filter by <= nowRef).
+      const processed = all
+        .map(ev => ({ ev, startDate: getEventStartDate(ev) }))
+        .filter(obj => obj.startDate && (isCustom ? true : (obj.startDate <= nowRef)))
+        .sort((a, b) => b.startDate - a.startDate);
+
+      const picked = processed.map(x => x.ev);
+      currentEvents = picked;
+
+      const sel = document.getElementById("eventSelect");
+      sel.innerHTML = "";
+
+      if (!picked.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = isCustom ? "No events in selected window." : "No events in the last 14 days.";
+        sel.appendChild(opt);
+        setStatus(isCustom ? "No events found for this date range." : "No events in the last 14 days.", false);
+        return;
+      }
+
+      const placeholder = document.createElement("option");
+      placeholder.value = "";
+      placeholder.textContent = "— Select job —";
+      sel.appendChild(placeholder);
+
+      for (let i = 0; i < picked.length; i++) {
+        const ev = picked[i];
+        const title = ev.summary || "(no title)";
+        const d = extractPrimaryDate(ev);
+        const opt = document.createElement("option");
+        opt.value = String(i);
+        opt.textContent = (d ? (d + " – ") : "") + title;
+        sel.appendChild(opt);
+      }
+
+      setStatus("Loaded " + picked.length + " events.", true);
+      logDebug("loadRecentEvents: loaded " + picked.length + " events.");
+
+      deriveEmployeeFromCalendarId(calId);
+
+      if (picked.length > 0) {
+        sel.selectedIndex = 1;
+        aiParseSelectedEvent();
+      }
+    }
+
+    function deriveEmployeeFromCalendarId(calId) {
+      const employeeInput = document.getElementById("employee");
+      if (!employeeInput) return;
+      if (employeeInput.value && employeeInput.value.trim()) return;
+
+      let derived = "";
+
+      if (calId && calId.indexOf("@") !== -1) {
+        const local = calId.split("@")[0];
+        // If it looks like name.surname@domain -> "Name Surname"
+        const parts = local.split(".");
+        if (parts.length >= 2) {
+          derived = parts
+            .filter(Boolean)
+            .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+            .join(" ");
+        }
+      }
+
+      employeeInput.value = (derived && derived.trim()) ? derived : "Frazer";
+    }
+
+    // ======================
+    //  BASIC (NON-AI) EXTRACTION
+    // ======================
+    function detectJobTypeFromText(title, desc) {
+      const text = (title + " " + desc).toLowerCase();
+      if (text.includes("tco") || text.includes("technical call out")) return "TCO";
+      if (text.includes("rtf") || text.includes("return to fix")) return "RTF";
+      if (text.includes("recce") || text.includes("site visit") || text.includes("survey")) return "Recce";
+      if (text.includes("install") || text.includes("installation") || text.includes("job/installation")) return "Job / Installation";
+      if (text.includes("meeting") || text.includes("consultation") || text.includes("consult")) return "Meeting / Consultation";
+      return "";
+    }
+
+    function basicJobDescription(summary, description) {
+      let lines = [];
+      if (summary) lines.push(summary.trim());
+      if (description) {
+        const descLines = description.split(/\r?\n/);
+        const trimmed = [];
+        for (let i = 0; i < descLines.length; i++) {
+          const l = descLines[i].trim();
+          if (!l) continue;
+          if (/^\d{4}-\d{2}-\d{2}/.test(l)) continue;
+          if (/^\d{2}\/\d{2}\/\d{4}/.test(l)) continue;
+          trimmed.push(l);
+        }
+        for (let j = 0; j < trimmed.length && j < 5; j++) lines.push(trimmed[j]);
+      }
+      return lines.join("\n");
+    }
+
+    function extractTechCheck(description) {
+      if (!description) return { summary: "", links: [] };
+      const lines = description.split(/\r?\n/);
+      const techLines = [];
+      const links = [];
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const lower = line.toLowerCase();
+        if (lower.includes("tech check") || lower.includes("techcheck")) {
+          techLines.push(line.trim());
+        }
+        const urlMatch = line.match(/https?:\/\/\S+/g);
+        if (urlMatch) {
+          for (let k = 0; k < urlMatch.length; k++) {
+            const u = urlMatch[k];
+            const ul = u.toLowerCase();
+            if (ul.includes("tech") || ul.includes("check")) {
+              links.push(u);
+            }
+          }
+        }
+      }
+      return { summary: techLines.join("\n"), links };
+    }
+
+    function extractContacts(description) {
+      if (!description) return { persons:"", phone:"", email:"" };
+      const lines = description.split(/\r?\n/);
+      const persons = [];
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const lower = line.toLowerCase();
+        if (
+          lower.includes("contact:") ||
+          lower.includes("contact -") ||
+          lower.includes("on-site contact") ||
+          lower.includes("onsite contact") ||
+          lower.startsWith("meeting with") ||
+          lower.startsWith("meet ")
+        ) {
+          const cleaned = line.replace(/.*:/, "").trim();
+          if (cleaned) persons.push(cleaned);
+        }
+      }
+      const emailMatch = description.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+      const phoneMatch = description.match(/\b(?:0\d{9,10}|\+?\d[\d\s\-]{7,}\d)\b/);
+      return {
+        persons: persons.join(", "),
+        phone: phoneMatch ? phoneMatch[0] : "",
+        email: emailMatch ? emailMatch[0] : ""
+      };
+    }
+
+    function fallbackFillFromEvent(ev) {
+      const title = ev.summary || "";
+      const desc  = ev.description || "";
+      const loc   = ev.location || "";
+
+      const jt = detectJobTypeFromText(title, desc);
+      const jobTypeSel = document.getElementById("jobType");
+      jobTypeSel.value = jt || "";
+      updateTimeOnSiteVisibility();
+
+      const dateStr = extractPrimaryDate(ev);
+      if (dateStr) document.getElementById("jobDate").value = dateStr;
+
+      const addrInput = document.getElementById("jobAddress");
+      if (!addrInput.value) {
+        if (loc) addrInput.value = loc;
+        else if (title) addrInput.value = title;
+      }
+
+      document.getElementById("jobDescription").value = basicJobDescription(title, desc);
+
+      const tech = extractTechCheck(desc);
+      document.getElementById("techCheck").value = tech.summary || "";
+      const techLinksDiv = document.getElementById("techLinks");
+      if (tech.links.length) {
+        let html = "Tech check links: ";
+        for (let i = 0; i < tech.links.length; i++) {
+          const u = tech.links[i];
+          html += '<a href="' + u + '" target="_blank" rel="noopener">' + u + "</a>";
+          if (i < tech.links.length - 1) html += " · ";
+        }
+        techLinksDiv.innerHTML = html;
+      } else {
+        techLinksDiv.textContent = "";
+      }
+
+      const contacts = extractContacts(desc);
+      if (contacts.persons && !document.getElementById("personsMet").value) {
+        document.getElementById("personsMet").value = contacts.persons;
+      }
+      if (contacts.phone && !document.getElementById("contactPhone").value) {
+        document.getElementById("contactPhone").value = contacts.phone;
+      }
+      if (contacts.email && !document.getElementById("contactEmail").value) {
+        document.getElementById("contactEmail").value = contacts.email;
+      }
+    }
+
+    // ======================
+    //  TIME ON SITE
+    // ======================
+    function timeToMinutes(t) {
+      if (!t) return null;
+      const parts = t.split(":");
+      if (parts.length !== 2) return null;
+      const h = Number(parts[0]);
+      const m = Number(parts[1]);
+      if (isNaN(h) || isNaN(m)) return null;
+      return h * 60 + m;
+    }
+
+    function minutesToHm(mins) {
+      if (mins == null || isNaN(mins)) return "";
+      const h = Math.floor(mins / 60);
+      const m = Math.round(mins % 60);
+      return h + "h " + String(m).padStart(2, "0") + "m";
+    }
+
+    function updateTimeOnSiteVisibility() {
+      const jt = document.getElementById("jobType").value;
+      const block = document.getElementById("timeOnSiteBlock");
+      if (jt === "TCO" || jt === "RTF") {
+        block.style.display = "block";
+      } else {
+        block.style.display = "none";
+      }
+    }
+
+    function recalcTimeOnSite() {
+      const start = timeToMinutes(document.getElementById("timeArrived").value);
+      const end   = timeToMinutes(document.getElementById("timeLeft").value);
+      let dur = "";
+      if (start != null && end != null) {
+        let diff = end - start;
+        if (diff < 0) diff += 24 * 60;
+        dur = minutesToHm(diff);
+      }
+      document.getElementById("timeDuration").value = dur;
+    }
+
+    // ======================
+    //  MEDIA LIST
+    // ======================
+    function updateMediaList() {
+      const input = document.getElementById("mediaFiles");
+      const listDiv = document.getElementById("mediaList");
+      if (!input.files || !input.files.length) {
+        listDiv.textContent = "No media selected.";
+        return;
+      }
+      const names = [];
+      for (let i = 0; i < input.files.length; i++) {
+        const f = input.files[i];
+        names.push(f.name + " (" + Math.round(f.size / 1024) + " KB)");
+      }
+      listDiv.innerHTML = "Attached (" + input.files.length + "):<br>" +
+        names.map(n => "• " + n).join("<br>");
+    }
+
+    // ======================
+    //  TEXT FLUFFING (non-AI fallback)
+    // ======================
+    function expandNotes(raw) {
+      if (!raw) return "";
+      if (!raw.includes("\n")) {
+        return raw.trim();
+      }
+      const lines = raw.split(/\r?\n/);
+      const kept = [];
+      for (let i = 0; i < lines.length; i++) {
+        const l = lines[i].trim();
+        if (l) kept.push(l);
+      }
+      if (!kept.length) return "";
+      const sentences = kept.map(line => {
+        let s = line;
+        if (!/[.!?]$/.test(s)) s += ".";
+        s = s.charAt(0).toUpperCase() + s.slice(1);
+        return s;
+      });
+      return sentences.join(" ");
+    }
+
+    // ======================
+    //  OPENAI: EVENT SCALP
+    // ======================
+    async function aiParseSelectedEvent() {
+      const sel = document.getElementById("eventSelect");
+      if (!sel.value) {
+        setAiStatus("Select a job from the list.", false);
+        return;
+      }
+      const ev = currentEvents[Number(sel.value)];
+      if (!ev) {
+        setAiStatus("Selected event not found.", false);
+        return;
+      }
+
+      const apiKey = localStorage.getItem(OPENAI_KEY_STORAGE);
+      const title = ev.summary || "";
+      const desc  = ev.description || "";
+      const loc   = ev.location || "";
+      const start = ev.start || {};
+      const end   = ev.end || {};
+      const attendees = ev.attendees || [];
+
+      if (!apiKey) {
+        fallbackFillFromEvent(ev);
+        setAiStatus("No OpenAI key set (using basic extraction only).", false);
+        return;
+      }
+
+      const eventData = {
+        title,
+        description: desc,
+        location: loc,
+        start,
+        end,
+        attendees
+      };
+
+      const systemPrompt =
+        "You are helping an audio-visual company engineer interpret a Google Calendar job event.\n" +
+        "You receive a JSON object with title, description, location, start, end, attendees.\n" +
+        "Your job is to fill as many job report fields as possible using ONLY information present in those fields.\n" +
+        "You must NOT invent any details from thin air.\n\n" +
+        "Use ALL of: title, description, and location to find:\n" +
+        "- job type (TCO, RTF, Meeting / Consultation, Recce, Job / Installation)\n" +
+        "- job description\n" +
+        "- tech check notes\n" +
+        "- persons met\n" +
+        "- contact phone / email / address\n" +
+        "- job date\n" +
+        "- address/site (hall / church name, town, postcode etc)\n\n" +
+        "If something is not clearly supported by the event text, leave that field empty.\n\n" +
+        "Return STRICT JSON ONLY in this format:\n" +
+        "{\n" +
+        '  "jobType": "TCO | RTF | Meeting / Consultation | Recce | Job / Installation | \\"\\"",\n' +
+        '  "jobDescription": "1–3 sentence description of what the visit is about, using only event details",\n' +
+        '  "techCheckSummary": "summary of any TECH CHECK style notes, or empty string",\n' +
+        '  "personsMet": "names of people expected / met on site if mentioned, comma separated",\n' +
+        '  "contactPhone": "phone number if present, else empty string",\n' +
+        '  "contactEmail": "email address if present, else empty string",\n' +
+        '  "contactAddress": "postal or site address text, if present (title/description/location), else empty string",\n' +
+        '  "jobDate": "YYYY-MM-DD if obvious from the event start, else empty string",\n' +
+        '  "jobAddress": "best guess at site name/address (title and/or location), else empty string"\n' +
+        "}\n\n" +
+        "If you are not sure about any field, return an empty string for that field.\n" +
+        "Do NOT include explanations. Only output the JSON object.";
+
+      setAiStatus("AI scalping selected event…", true);
+      logDebug("aiParseSelectedEvent: calling OpenAI.");
+
+      try {
+        const res = await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + apiKey
+          },
+          body: JSON.stringify({
+            model: OPENAI_MODEL,
+            input: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: JSON.stringify(eventData) }
+            ]
+          })
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          console.error("OpenAI error:", res.status, txt);
+          setAiStatus("OpenAI error " + res.status + ". Basic extraction used instead.", false);
+          logDebug("OpenAI error " + res.status + ": " + txt);
+          fallbackFillFromEvent(ev);
+          return;
+        }
+
+        const data = await res.json();
+        let rawText = "";
+        if (
+          data.output &&
+          data.output[0] &&
+          data.output[0].content &&
+          data.output[0].content[0] &&
+          data.output[0].content[0].text
+        ) {
+          rawText = data.output[0].content[0].text;
+        }
+
+        let parsed;
+        try {
+          parsed = JSON.parse(rawText);
+        } catch (e) {
+          console.error("Failed to parse JSON from OpenAI:", rawText);
+          setAiStatus("AI format issue. Basic extraction used instead.", false);
+          logDebug("AI JSON parse error: " + e.message);
+          fallbackFillFromEvent(ev);
+          return;
+        }
+
+        fallbackFillFromEvent(ev);
+
+        const jobTypeSel = document.getElementById("jobType");
+        if (parsed.jobType) jobTypeSel.value = parsed.jobType;
+
+        if (parsed.jobDescription) {
+          document.getElementById("jobDescription").value = parsed.jobDescription;
+        }
+        if (parsed.techCheckSummary) {
+          document.getElementById("techCheck").value = parsed.techCheckSummary;
+        }
+        if (parsed.personsMet) {
+          document.getElementById("personsMet").value = parsed.personsMet;
+        }
+        if (parsed.contactPhone) {
+          document.getElementById("contactPhone").value = parsed.contactPhone;
+        }
+        if (parsed.contactEmail) {
+          document.getElementById("contactEmail").value = parsed.contactEmail;
+        }
+        if (parsed.contactAddress) {
+          document.getElementById("contactAddress").value = parsed.contactAddress;
+        }
+        if (parsed.jobDate) {
+          document.getElementById("jobDate").value = parsed.jobDate;
+        } else {
+          const dateStr = extractPrimaryDate(ev);
+          if (dateStr) document.getElementById("jobDate").value = dateStr;
+        }
+
+        const addrInput = document.getElementById("jobAddress");
+        if (parsed.jobAddress) {
+          addrInput.value = parsed.jobAddress;
+        } else if (!addrInput.value) {
+          if (loc) addrInput.value = loc;
+          else if (title) addrInput.value = title;
+        }
+
+        updateTimeOnSiteVisibility();
+        setAiStatus("AI scalped event. Review & tweak as needed.", true);
+        logDebug("aiParseSelectedEvent: success.");
+      } catch (err) {
+        console.error(err);
+        setAiStatus("Network error talking to OpenAI. Basic extraction used instead.", false);
+        logDebug("aiParseSelectedEvent network error: " + (err && err.message ? err.message : String(err)));
+        fallbackFillFromEvent(ev);
+      }
+    }
+
+    // ======================
+    //  OPENAI: REPORT TEXT IMPROVEMENT
+    // ======================
+    async function improveReportFieldsWithAI() {
+      const apiKey = localStorage.getItem(OPENAI_KEY_STORAGE);
+      if (!apiKey) {
+        throw new Error("No OpenAI key set.");
+      }
+
+      const jobDescription = document.getElementById("jobDescription").value.trim();
+      const findings = document.getElementById("findings").value.trim();
+      const howLeft = document.getElementById("howLeft").value.trim();
+      const advisories = document.getElementById("advisories").value.trim();
+
+      if (!jobDescription && !findings && !howLeft && !advisories) {
+        logDebug("improveReportFieldsWithAI: nothing to improve.");
+        return;
+      }
+
+      const payload = {
+        jobDescription,
+        findings,
+        howLeft,
+        advisories
+      };
+
+      const systemPrompt = `
+You help an audio-visual engineer polish short internal job report notes into clear, concise UK English.
+
+You receive this JSON:
+{
+  "jobDescription": "engineer’s rough text about what the visit was for",
+  "findings": "short bullet-style or choppy notes about what was found on site",
+  "howLeft": "notes on how the system was left at the end of the visit",
+  "advisories": "notes on future improvements, risks, or recommendations"
+}
+
+Rules:
+- Do NOT invent new problems, solutions or kit.
+- Only rewrite and lightly clarify what is already there.
+- Keep it factual and engineer-facing, not marketing-speak.
+- Short, tight paragraphs. No waffle.
+- Return each field as a single paragraph with NO line breaks (no "\\n" inside the strings).
+
+Return STRICT JSON ONLY in this format:
+{
+  "jobDescription": "rewritten job description paragraph",
+  "findings": "rewritten findings paragraph",
+  "howLeft": "rewritten how-things-were-left paragraph",
+  "advisories": "rewritten advisories paragraph"
+}
+`;
+
+      setAiStatus("Improving report text with AI…", true);
+      logDebug("improveReportFieldsWithAI: calling OpenAI.");
+
+      const res = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + apiKey
+        },
+        body: JSON.stringify({
+          model: OPENAI_MODEL,
+          input: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: JSON.stringify(payload) }
+          ]
+        })
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        logDebug("improveReportFieldsWithAI OpenAI error " + res.status + ": " + txt);
+        throw new Error("OpenAI error " + res.status);
+      }
+
+      const data = await res.json();
+      let rawText = "";
+      if (
+        data.output &&
+        data.output[0] &&
+        data.output[0].content &&
+        data.output[0].content[0] &&
+        data.output[0].content[0].text
+      ) {
+        rawText = data.output[0].content[0].text;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(rawText);
+      } catch (e) {
+        logDebug("improveReportFieldsWithAI JSON parse error: " + e.message);
+        throw new Error("AI returned non-JSON.");
+      }
+
+      if (parsed.jobDescription) {
+        document.getElementById("jobDescription").value = parsed.jobDescription;
+      }
+      if (parsed.findings) {
+        document.getElementById("findings").value = parsed.findings;
+      }
+      if (parsed.howLeft) {
+        document.getElementById("howLeft").value = parsed.howLeft;
+      }
+      if (parsed.advisories) {
+        document.getElementById("advisories").value = parsed.advisories;
+      }
+
+      setAiStatus("Report text improved. Generating preview…", true);
+      logDebug("improveReportFieldsWithAI: success.");
+    }
+
+    // ======================
+    //  REPORT BUILDING
+    // ======================
+    function buildReportHtmlBody() {
+      const employee = document.getElementById("employee").value.trim();
+      const jobType  = document.getElementById("jobType").value;
+      const jobDate  = document.getElementById("jobDate").value;
+      const jobAddr  = document.getElementById("jobAddress").value.trim();
+      const jobDesc  = document.getElementById("jobDescription").value.trim();
+      const tech     = document.getElementById("techCheck").value.trim();
+      const persons  = document.getElementById("personsMet").value.trim();
+      const cPhone   = document.getElementById("contactPhone").value.trim();
+      const cEmail   = document.getElementById("contactEmail").value.trim();
+      const cAddr    = document.getElementById("contactAddress").value.trim();
+      const dur      = document.getElementById("timeDuration").value.trim();
+      const findings = document.getElementById("findings").value.trim();
+      const howRaw   = document.getElementById("howLeft").value.trim();
+      const advRaw   = document.getElementById("advisories").value.trim();
+      const howFull  = expandNotes(howRaw);
+      const advFull  = expandNotes(advRaw);
+
+      const mediaInput = document.getElementById("mediaFiles");
+      const mediaItems = [];
+      if (mediaInput.files) {
+        for (let i = 0; i < mediaInput.files.length; i++) {
+          mediaItems.push(mediaInput.files[i].name);
+        }
+      }
+
+      const title = "Job Report" +
+        (jobType ? " – " + jobType : "") +
+        (jobDate ? " – " + jobDate : "");
+
+      const header =
+        "<h1>" + title + "</h1>" +
+        "<table>" +
+          "<tr><th style=\"width:20%\">Employee</th><td>" + (employee || "–") + "</td></tr>" +
+          "<tr><th>Job type</th><td>" + (jobType || "–") + "</td></tr>" +
+          "<tr><th>Date</th><td>" + (jobDate || "–") + "</td></tr>" +
+          "<tr><th>Address / site</th><td>" + (jobAddr || "–") + "</td></tr>" +
+          "<tr><th>Person(s) met</th><td>" + (persons || "–") + "</td></tr>" +
+        "</table>";
+
+      const contactBits = [];
+      if (cPhone) contactBits.push("Phone: " + cPhone);
+      if (cEmail) contactBits.push("Email: " + cEmail);
+      if (cAddr)  contactBits.push("Postal address: " + cAddr.replace(/\n/g, "; "));
+
+      const sections = [];
+
+      sections.push("<h2>Job description</h2>");
+      sections.push("<p>" + (jobDesc ? jobDesc.replace(/\n/g, "<br>") : "–") + "</p>");
+
+      sections.push("<h2>Tech check summary</h2>");
+      sections.push("<p>" + (tech ? tech.replace(/\n/g, "<br>") : "–") + "</p>");
+
+      sections.push("<h2>Contacts</h2>");
+      let contactHtml = "<p><b>Person(s) met:</b> " + (persons || "–") + "</p>";
+      if (contactBits.length) contactHtml += "<p>" + contactBits.join("<br>") + "</p>";
+      sections.push(contactHtml);
+
+      if (jobType === "TCO" || jobType === "RTF") {
+        const arr = document.getElementById("timeArrived").value;
+        const left = document.getElementById("timeLeft").value;
+        sections.push("<h2>Time on site</h2>");
+        sections.push(
+          "<p><b>Arrived:</b> " + (arr || "–") +
+          "<br><b>Left:</b> " + (left || "–") +
+          "<br><b>Duration:</b> " + (dur || "–") + "</p>"
+        );
+      }
+
+      sections.push("<h2>Findings</h2>");
+      sections.push("<p>" + (findings ? findings.replace(/\n/g, "<br>") : "–") + "</p>");
+
+      sections.push("<h2>How things have been left</h2>");
+      sections.push("<p>" + (howFull || "–") + "</p>");
+
+      sections.push("<h2>Advisories</h2>");
+      sections.push("<p>" + (advFull || "–") + "</p>");
+
+      sections.push("<h2>Photos / videos</h2>");
+      if (mediaItems.length) {
+        sections.push("<ul>" + mediaItems.map(n => "<li>" + n + "</li>").join("") + "</ul>");
+      } else {
+        sections.push("<p>None listed.</p>");
+      }
+
+      return header + sections.join("");
+    }
+
+    function buildReportDocHtml() {
+      const bodyHtml = buildReportHtmlBody();
+      const css =
+        "<style>" +
+        "@page { size: A4; margin: 2cm; }" +
+        "body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #000000; }" +
+        "h1 { font-size: 16pt; margin: 0 0 6pt 0; }" +
+        "h2 { font-size: 13pt; margin: 10pt 0 4pt 0; }" +
+        "table { border-collapse: collapse; width: 100%; margin: 4pt 0 10pt 0; }" +
+        "th, td { border: 1px solid #cccccc; padding: 4pt 6pt; vertical-align: top; }" +
+        "th { background: #f0f0f0; font-weight: bold; }" +
+        "p { margin: 0 0 6pt 0; }" +
+        "ul { margin: 0 0 6pt 18pt; padding: 0; }" +
+        "li { margin: 0 0 2pt 0; }" +
+        "</style>";
+      return "<!doctype html><html><head><meta charset=\"utf-8\"><title>Job Report</title>" +
+             css + "</head><body>" + bodyHtml + "</body></html>";
+    }
+
+    function buildReportText() {
+      const employee = document.getElementById("employee").value.trim();
+      const jobType  = document.getElementById("jobType").value;
+      const jobDate  = document.getElementById("jobDate").value;
+      const jobAddr  = document.getElementById("jobAddress").value.trim();
+      const jobDesc  = document.getElementById("jobDescription").value.trim();
+      const tech     = document.getElementById("techCheck").value.trim();
+      const persons  = document.getElementById("personsMet").value.trim();
+      const cPhone   = document.getElementById("contactPhone").value.trim();
+      const cEmail   = document.getElementById("contactEmail").value.trim();
+      const cAddr    = document.getElementById("contactAddress").value.trim();
+      const dur      = document.getElementById("timeDuration").value.trim();
+      const findings = document.getElementById("findings").value.trim();
+      const howFull  = expandNotes(document.getElementById("howLeft").value.trim());
+      const advFull  = expandNotes(document.getElementById("advisories").value.trim());
+
+      const mediaInput = document.getElementById("mediaFiles");
+      const mediaItems = [];
+      if (mediaInput.files) {
+        for (let i = 0; i < mediaInput.files.length; i++) {
+          mediaItems.push(mediaInput.files[i].name);
+        }
+      }
+
+      const lines = [];
+      lines.push("Job Report");
+      lines.push("==========");
+      lines.push("");
+      lines.push("Employee: " + (employee || "-"));
+      lines.push("Job type: " + (jobType || "-"));
+      lines.push("Date: " + (jobDate || "-"));
+      lines.push("");
+      lines.push("Site & description");
+      lines.push("------------------");
+      lines.push("Address/site: " + (jobAddr || "-"));
+      lines.push("Job description:");
+      lines.push(jobDesc || "-");
+      lines.push("");
+      lines.push("Tech check summary");
+      lines.push("------------------");
+      lines.push(tech || "-");
+      lines.push("");
+      lines.push("Person(s) met & contacts");
+      lines.push("------------------------");
+      lines.push("Person(s) met: " + (persons || "-"));
+      if (cPhone) lines.push("Phone: " + cPhone);
+      if (cEmail) lines.push("Email: " + cEmail);
+      if (cAddr)  lines.push("Postal address: " + cAddr.replace(/\r?\n/g, "; "));
+      lines.push("");
+
+      if (jobType === "TCO" || jobType === "RTF") {
+        const arr = document.getElementById("timeArrived").value;
+        const left = document.getElementById("timeLeft").value;
+        lines.push("Time on site");
+        lines.push("------------");
+        lines.push("Arrived: " + (arr || "-"));
+        lines.push("Left: " + (left || "-"));
+        lines.push("Duration: " + (dur || "-"));
+        lines.push("");
+      }
+
+      lines.push("Findings");
+      lines.push("--------");
+      lines.push(findings || "-");
+      lines.push("");
+      lines.push("How things have been left");
+      lines.push("-------------------------");
+      lines.push(howFull || "-");
+      lines.push("");
+      lines.push("Advisories");
+      lines.push("----------");
+      lines.push(advFull || "-");
+      lines.push("");
+
+      lines.push("Photos / videos");
+      lines.push("---------------");
+      if (mediaItems.length) {
+        for (let i = 0; i < mediaItems.length; i++) {
+          lines.push("• " + mediaItems[i]);
+        }
+      } else {
+        lines.push("None listed.");
+      }
+
+      return lines.join("\n");
+    }
+
+    async function generateReport() {
+      logDebug("generateReport: starting.");
+      const apiKey = localStorage.getItem(OPENAI_KEY_STORAGE);
+
+      if (apiKey) {
+        try {
+          await improveReportFieldsWithAI();
+        } catch (e) {
+          setAiStatus("AI improvement failed – using raw text.", false);
+          logDebug("generateReport: AI improvement error: " + (e && e.message ? e.message : String(e)));
+        }
+      } else {
+        setAiStatus("No OpenAI key set – using raw text only.", false);
+      }
+
+      logDebug("generateReport: building HTML + text.");
+      const htmlBody = buildReportHtmlBody();
+      const text = buildReportText();
+      lastReportText = text;
+      const preview = document.getElementById("reportPreview");
+      preview.innerHTML = htmlBody;
+      preview.scrollTop = 0;
+    }
+
+    // ======================
+    //  PDF GENERATION (A4 PORTRAIT, STRUCTURED, WITH EXTRA SPACING)
+    // ======================
+    async function generatePdfAndOpen() {
+      if (!lastReportText) {
+        logDebug("generatePdfAndOpen: no lastReportText, calling generateReport().");
+        await generateReport();
+      }
+
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        logDebug("generatePdfAndOpen: jsPDF not available.");
+        alert("PDF library not loaded – cannot generate PDF.");
+        return;
+      }
+
+      const employee = document.getElementById("employee").value.trim();
+      const jobType  = document.getElementById("jobType").value;
+      const jobDate  = document.getElementById("jobDate").value;
+      const jobAddr  = document.getElementById("jobAddress").value.trim();
+      const jobDesc  = document.getElementById("jobDescription").value.trim();
+      const tech     = document.getElementById("techCheck").value.trim();
+      const persons  = document.getElementById("personsMet").value.trim();
+      const cPhone   = document.getElementById("contactPhone").value.trim();
+      const cEmail   = document.getElementById("contactEmail").value.trim();
+      const cAddr    = document.getElementById("contactAddress").value.trim();
+      const dur      = document.getElementById("timeDuration").value.trim();
+      const findings = document.getElementById("findings").value.trim();
+      const howRaw   = document.getElementById("howLeft").value.trim();
+      const advRaw   = document.getElementById("advisories").value.trim();
+      const howFull  = expandNotes(howRaw);
+      const advFull  = expandNotes(advRaw);
+
+      const { jsPDF } = window.jspdf;
+
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4"
+      });
+
+      const marginLeft = 15;
+      const marginTop = 20;
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const contentWidth = pageWidth - marginLeft * 2;
+      const lineHeight = 5;
+      const bottomLimit = pageHeight - marginTop;
+
+      let cursorY = marginTop;
+
+      function ensurePageSpace(linesNeeded) {
+        const needed = linesNeeded * lineHeight;
+        if (cursorY + needed > bottomLimit) {
+          doc.addPage();
+          cursorY = marginTop;
+        }
+      }
+
+      function addSection(heading, bodyText) {
+        const text = bodyText && bodyText.trim() ? bodyText.trim() : "-";
+        const bodyLines = doc.splitTextToSize(text, contentWidth);
+        const estimateLines = 2 + bodyLines.length;
+        ensurePageSpace(estimateLines + 1);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(13);
+        doc.text(heading, marginLeft, cursorY);
+        cursorY += lineHeight;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(11);
+        for (let i = 0; i < bodyLines.length; i++) {
+          if (cursorY > bottomLimit) {
+            doc.addPage();
+            cursorY = marginTop;
+          }
+          doc.text(bodyLines[i], marginLeft, cursorY);
+          cursorY += lineHeight;
+        }
+        cursorY += lineHeight * 0.5;
+      }
+
+      let title = "Job Report";
+      const typePart = jobType || "Job";
+      title += " – " + typePart;
+      if (jobDate) title += " – " + jobDate;
+      if (jobAddr) title += " – " + jobAddr;
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      const titleLines = doc.splitTextToSize(title, contentWidth);
+      for (let i = 0; i < titleLines.length; i++) {
+        doc.text(titleLines[i], marginLeft, cursorY);
+        cursorY += lineHeight;
+      }
+      cursorY += lineHeight * 2;
+
+      const labelColWidth = 40;
+      const valueColWidth = contentWidth - labelColWidth;
+      const labelX = marginLeft;
+      const valueX = marginLeft + labelColWidth;
+
+      function addInfoRow(label, value) {
+        const v = value && value.trim() ? value.trim() : "-";
+
+        doc.setFontSize(11);
+        const labelLines = doc.splitTextToSize(label, labelColWidth - 4);
+        const valueLines = doc.splitTextToSize(v, valueColWidth - 4);
+        const linesCount = Math.max(labelLines.length, valueLines.length);
+        const rowHeight = linesCount * lineHeight + 2;
+
+        ensurePageSpace(linesCount + 1);
+
+        doc.rect(labelX, cursorY, labelColWidth, rowHeight);
+        doc.rect(valueX, cursorY, valueColWidth, rowHeight);
+
+        let ly = cursorY + lineHeight;
+        doc.setFont("helvetica", "bold");
+        for (let i = 0; i < labelLines.length; i++) {
+          doc.text(labelLines[i], labelX + 2, ly);
+          ly += lineHeight;
+        }
+
+        let vy = cursorY + lineHeight;
+        doc.setFont("helvetica", "normal");
+        for (let i = 0; i < valueLines.length; i++) {
+          doc.text(valueLines[i], valueX + 2, vy);
+          vy += lineHeight;
+        }
+
+        cursorY += rowHeight;
+      }
+
+      addInfoRow("Employee:", employee);
+      addInfoRow("Job type:", jobType || "");
+      addInfoRow("Date:", jobDate || "");
+      addInfoRow("Address / site:", jobAddr || "");
+      addInfoRow("Person(s) met:", persons || "");
+
+      cursorY += lineHeight * 2;
+
+      addSection("Job description", jobDesc);
+      addSection("Tech check summary", tech);
+
+      let contactsText = "";
+      if (persons) contactsText += "Person(s) met: " + persons + "\n";
+      if (cPhone) contactsText += "Phone: " + cPhone + "\n";
+      if (cEmail) contactsText += "Email: " + cEmail + "\n";
+      if (cAddr) contactsText += "Postal address: " + cAddr.replace(/\r?\n/g, ", ") + "\n";
+      contactsText = contactsText.trim();
+      addSection("Contacts", contactsText);
+
+      if (jobType === "TCO" || jobType === "RTF") {
+        const arr = document.getElementById("timeArrived").value;
+        const left = document.getElementById("timeLeft").value;
+        let timeText = "";
+        timeText += "Arrived: " + (arr || "-") + "\n";
+        timeText += "Left: " + (left || "-") + "\n";
+        timeText += "Duration: " + (dur || "-");
+        addSection("Time on site", timeText);
+      }
+
+      addSection("Findings", findings);
+      addSection("How things have been left", howFull);
+      addSection("Advisories", advFull);
+
+      const safeType = (jobType || "job").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+      const safeDate = (jobDate || "").replace(/[^0-9\-]+/g, "");
+      const fname = "job_report_" + safeType + (safeDate ? "_" + safeDate : "") + ".pdf";
+
+      const blobUrl = doc.output("bloburl");
+      logDebug("generatePdfAndOpen: opening PDF " + fname);
+      window.open(blobUrl, "_blank");
+    }
+
+    async function viewReport() {
+      logDebug("viewReport: generating structured A4 portrait PDF.");
+      await generatePdfAndOpen();
+    }
+
+    async function copyReportText() {
+      if (!lastReportText) {
+        await generateReport().catch(err => {
+          logDebug("copyReportText generateReport error: " + (err && err.message ? err.message : String(err)));
+        });
+      }
+      try {
+        await navigator.clipboard.writeText(lastReportText);
+        alert("Report text copied to clipboard.");
+      } catch (e) {
+        alert("Could not copy automatically. You may need to select and copy from the preview.");
+      }
+    }
+
+    function downloadWordDoc() {
+      const html = buildReportDocHtml();
+      const jobDate  = document.getElementById("jobDate").value || "";
+      const jobType  = document.getElementById("jobType").value || "job";
+      const safeType = jobType.replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+      const fname = "job_report_" + safeType + (jobDate ? "_" + jobDate : "") + ".doc";
+      const blob = new Blob([html], { type: "application/msword" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 0);
+    }
+
+    function sendReportEmail() {
+      if (!lastReportText) {
+        generateReport().then(() => sendReportEmail()).catch(err => {
+          logDebug("sendReportEmail generateReport error: " + (err && err.message ? err.message : String(err)));
+        });
+        return;
+      }
+      const jobType  = document.getElementById("jobType").value || "Job";
+      const jobDate  = document.getElementById("jobDate").value || "";
+      const jobAddr  = document.getElementById("jobAddress").value.trim();
+      const subject  = "Job Report – " + jobType +
+                       (jobDate ? (" – " + jobDate) : "") +
+                       (jobAddr ? (" – " + jobAddr) : "");
+      const to = [
+        "Neil.Lovell@audiovisualdirectuk.co.uk",
+        "Mark.Thyer@audiovisualdirectuk.co.uk",
+        "David.Rolt@audiovisualdirectuk.co.uk"
+      ].join(",");
+
+      const body = encodeURIComponent(
+        lastReportText +
+        "\n\n(Photos/videos and the Word report are not attached automatically – please attach them manually.)"
+      );
+      const mailto = "mailto:" + encodeURIComponent(to) +
+                     "?subject=" + encodeURIComponent(subject) +
+                     "&body=" + body;
+      window.location.href = mailto;
+    }
+
+    // ======================
+    //  API KEY PANEL LOGIC
+    // ======================
+    function refreshApiKeyStatus() {
+      const statusEl = document.getElementById("apiKeyStatus");
+      if (!statusEl) return;
+      const key = localStorage.getItem(OPENAI_KEY_STORAGE);
+      if (key) {
+        statusEl.textContent = "API key is stored in this browser.";
+      } else {
+        statusEl.textContent = "No API key stored yet.";
+      }
+    }
+
+    function handleSaveApiKey() {
+      const input = document.getElementById("apiKeyInput");
+      const v = (input.value || "").trim();
+      if (!v) {
+        alert("Enter a key first.");
+        return;
+      }
+      localStorage.setItem(OPENAI_KEY_STORAGE, v);
+      input.value = "";
+      refreshApiKeyStatus();
+      logDebug("OpenAI key saved to localStorage.");
+    }
+
+    function handleClearApiKey() {
+      localStorage.removeItem(OPENAI_KEY_STORAGE);
+      refreshApiKeyStatus();
+      logDebug("OpenAI key cleared from localStorage.");
+    }
+
+    // ======================
+    //  AI DEBUGGER LOGIC
+    // ======================
+    const aiDebuggerSystemPrompt =
+      "You are an AI debugger for a single-page browser tool called 'Job Report Generator'.\n" +
+      "The tool loads job events from Google Calendar, uses AI to scalp the selected event into report fields, polishes report notes, and generates Word/PDF outputs.\n" +
+      "The tool is delivered as a single index.html and runs entirely in the browser (no backend).\n\n" +
+      "Important rules (labelled 'Be Strict'):\n" +
+      "1) Only change code when you can point to a concrete bug, missing handler, or clearly unsafe behaviour.\n" +
+      "2) Never rewrite or simplify working code.\n" +
+      "3) Keep all existing layout, styling, naming, and structure unless a specific bug forces a change.\n" +
+      "4) When you change code, you must:\n" +
+      "   - Explain the issue in plain language,\n" +
+      "   - Explain why your change fixes it,\n" +
+      "   - Describe exactly where the change belongs (function name or HTML section),\n" +
+      "   - Provide a full replacement index.html with your changes applied.\n" +
+      "5) The replacement index must be COMPLETE, from <!doctype html> to </html>, with NO truncation, ellipses, or placeholders.\n" +
+      "6) Do not invent external configuration fixes (API keys, account/project changes, quotas). If the problem is external, say so explicitly.\n\n" +
+      "Calendar expectations:\n" +
+      "- Default mode loads last 14 days + today (future events can be hidden in default mode).\n" +
+      "- Advanced date range mode must allow selecting future events (do not filter out future events when custom range is active).\n\n" +
+      "PDF expectations:\n" +
+      "- Preserve existing PDF layout/formatting rules unless you are fixing a real overlap/spacing/overflow defect.\n\n" +
+      "You will be given a JSON payload with:\n" +
+      "- toolName, versionPill\n" +
+      "- indexHtml (full current page source)\n" +
+      "- debugLog (internal debug text)\n" +
+      "- selectedEvent (the current selected event payload, if any)\n" +
+      "- browserErrors (window.onerror / unhandledrejection text)\n" +
+      "- consoleBuffer (captured console log/warn/error)\n" +
+      "- userIssue (the user’s own description of what isn’t working)\n" +
+      "- consoleExtra (freeform text pasted by the user)\n\n" +
+      "You must respond with STRICT JSON in this shape:\n" +
+      "{\n" +
+      "  \"outcome\": \"code_fix\" | \"external_issue\" | \"no_issue\",\n" +
+      "  \"summary\": \"Short summary of what you found.\",\n" +
+      "  \"reasons\": [\"reason 1\", \"reason 2\", \"...\"],\n" +
+      "  \"changes\": [\n" +
+      "    {\n" +
+      "      \"section\": \"short label (e.g. loadRecentEvents, PDF generator)\",\n" +
+      "      \"reason\": \"why this section needs a change\",\n" +
+      "      \"beforeSnippet\": \"optional short snippet from the old code (can be empty)\",\n" +
+      "      \"afterSnippet\": \"the corresponding fixed snippet (can be empty if not applicable)\"\n" +
+      "    }\n" +
+      "  ],\n" +
+      "  \"replacementIndexHtml\": \"Full index.html with your fixes applied, or an empty string if no code changes are needed.\",\n" +
+      "  \"chatgptPrompt\": \"If outcome is external_issue, write a prompt the user can paste into ChatGPT to get further help. Otherwise empty string.\"\n" +
+      "}\n" +
+      "If you believe the issue cannot be solved by changing index.html (for example: account or quota issues, missing model access, or third-party service outages), set outcome to \"external_issue\" and do NOT propose code changes.";
+
+    function extractResponseText(data) {
+      if (
+        data &&
+        data.output &&
+        data.output[0] &&
+        data.output[0].content &&
+        data.output[0].content[0] &&
+        data.output[0].content[0].text
+      ) {
+        return data.output[0].content[0].text;
+      }
+      return "";
+    }
+
+    async function callOpenAIWithFallback(apiKey, systemPrompt, payload) {
+      let lastErr = null;
+
+      for (let i = 0; i < DEBUG_MODEL_CANDIDATES.length; i++) {
+        const model = DEBUG_MODEL_CANDIDATES[i];
+        logDebug("AI Debugger: trying model " + model + "…");
+
+        try {
+          const res = await fetch("https://api.openai.com/v1/responses", {
+            method: "POST",
+            headers: {
+              "Content-Type":"application/json",
+              "Authorization":"Bearer " + apiKey
+            },
+            body: JSON.stringify({
+              model,
+              input: [
+                { role:"system", content: systemPrompt },
+                { role:"user", content: JSON.stringify(payload) }
+              ]
+            })
+          });
+
+          if (!res.ok) {
+            const txt = await res.text().catch(() => "");
+            const msg = "Model " + model + " returned " + res.status + ": " + txt;
+            logDebug("AI Debugger: " + msg);
+            lastErr = new Error(msg);
+
+            // Fallback cases: model not found / not permitted / not available
+            if (res.status === 404 || res.status === 403) {
+              continue;
+            }
+            throw lastErr;
+          }
+
+          const data = await res.json();
+          const rawText = extractResponseText(data);
+          if (!rawText) {
+            throw new Error("Unexpected AI response shape (no text content) from model " + model);
+          }
+
+          logDebug("AI Debugger: model " + model + " succeeded.");
+          return rawText;
+        } catch (e) {
+          lastErr = e;
+          // If network / CORS / transient, no point retrying other models
+          const message = (e && e.message) ? e.message : String(e);
+          if (
+            message.includes("Failed to fetch") ||
+            message.includes("NetworkError") ||
+            message.includes("CORS")
+          ) {
+            throw e;
+          }
+        }
+      }
+
+      throw lastErr || new Error("AI Debugger failed on all candidate models.");
+    }
+
+    async function handleRunAiDebugger() {
+      let apiKey = "";
+      try {
+        apiKey = localStorage.getItem(OPENAI_KEY_STORAGE) || "";
+        if (!apiKey) throw new Error("No OpenAI API key found. Set it in the API key panel.");
+      } catch (e) {
+        setAiStatus(e.message || "No API key set for AI Debugger.", false);
+        const outEl = document.getElementById("aiDebuggerOutput");
+        if (outEl) outEl.textContent = e.message || "No API key set.";
+        return;
+      }
+
+      const btn = document.getElementById("runAiDebuggerBtn");
+      if (btn) btn.disabled = true;
+      setAiStatus("Running AI Debugger…", true);
+      logDebug("AI Debugger invoked.");
+
+      const eventSelect = document.getElementById("eventSelect");
+      let selectedEvent = null;
+      if (eventSelect && eventSelect.value) {
+        const ev = currentEvents[Number(eventSelect.value)];
+        if (ev) {
+          selectedEvent = {
+            summary: ev.summary || "",
+            description: ev.description || "",
+            location: ev.location || "",
+            start: ev.start || {},
+            end: ev.end || {},
+            attendees: ev.attendees || []
+          };
+        }
+      }
+
+      const payload = {
+        toolName: "Job Report Generator",
+        versionPill: (document.getElementById("versionPill") && document.getElementById("versionPill").textContent) || "",
+        indexHtml: document.documentElement.outerHTML,
+        debugLog: (document.getElementById("debugLog") && document.getElementById("debugLog").textContent) || "",
+        selectedEvent,
+        browserErrors: browserErrorLog.slice(),
+        consoleBuffer: consoleLogBuffer.slice(),
+        userIssue: (document.getElementById("aiDebuggerUserIssue") && document.getElementById("aiDebuggerUserIssue").value) || "",
+        consoleExtra: (document.getElementById("consoleErrorsInput") && document.getElementById("consoleErrorsInput").value) || ""
+      };
+
+      const outEl = document.getElementById("aiDebuggerOutput");
+      const replEl = document.getElementById("replacementIndexOutput");
+      if (outEl) outEl.textContent = "";
+      if (replEl) replEl.textContent = "(none yet)";
+
+      try {
+        const rawText = await callOpenAIWithFallback(apiKey, aiDebuggerSystemPrompt, payload);
+
+        let parsed;
+        try {
+          parsed = JSON.parse(rawText);
+        } catch (e) {
+          console.error("AI Debugger JSON parse failed:", rawText);
+          throw new Error("AI Debugger JSON parse failed.");
+        }
+
+        const outcome = parsed.outcome || "no_issue";
+        const summary = parsed.summary || "";
+        const reasons = Array.isArray(parsed.reasons) ? parsed.reasons : [];
+        const changes = Array.isArray(parsed.changes) ? parsed.changes : [];
+        const replacementIndexHtml = parsed.replacementIndexHtml || "";
+        const chatgptPrompt = parsed.chatgptPrompt || "";
+
+        let outText = "";
+        outText += "Outcome: " + outcome + "\n";
+        if (summary) {
+          outText += "\nSummary:\n" + summary + "\n";
+        }
+        if (reasons.length) {
+          outText += "\nReasons:\n";
+          reasons.forEach((r) => { outText += "- " + r + "\n"; });
+        }
+        if (changes.length) {
+          outText += "\nChanges:\n";
+          changes.forEach((c, idx) => {
+            const section = c.section || ("Change " + (idx + 1));
+            const reason = c.reason || "";
+            outText += "* " + section + (reason ? " – " + reason : "") + "\n";
+          });
+        }
+
+        if (outEl) outEl.textContent = outText || "(no details provided by AI Debugger)";
+
+        if (replEl) {
+          if (outcome === "code_fix" && replacementIndexHtml) {
+            replEl.textContent = replacementIndexHtml;
+          } else if (outcome === "external_issue" && chatgptPrompt) {
+            replEl.textContent = chatgptPrompt;
+          } else {
+            replEl.textContent = "(no replacement index provided)";
+          }
+        }
+
+        setAiStatus("AI Debugger finished. Review its output below.", true);
+      } catch (e) {
+        console.error(e);
+        if (outEl) outEl.textContent = e.message || "AI Debugger error.";
+        setAiStatus(e.message || "AI Debugger error.", false);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    // ======================
+    //  INIT
+    // ======================
+    window.addEventListener("DOMContentLoaded", function() {
+      logDebug("DOMContentLoaded.");
+
+      // Version pill + guard
+      try {
+        const pill = document.getElementById("versionPill");
+        if (pill) pill.textContent = APP_VERSION;
+
+        const last = localStorage.getItem(VERSION_GUARD_KEY);
+        if (last && last === APP_VERSION) {
+          logDebug("Version guard: version unchanged since last load (" + APP_VERSION + ").");
+        }
+        localStorage.setItem(VERSION_GUARD_KEY, APP_VERSION);
+      } catch (e) {
+        logDebug("Version init error: " + (e && e.message ? e.message : String(e)));
+      }
+
+      // Capture browser-level errors into browserErrorLog and debug pane
+      window.addEventListener("error", (event) => {
+        const msg = (event.message || "Unknown error") +
+          (event.filename ? (" @ " + event.filename + ":" + event.lineno + ":" + event.colno) : "");
+        browserErrorLog.push(msg);
+        logDebug("BROWSER ERROR: " + msg);
+      });
+
+      window.addEventListener("unhandledrejection", (event) => {
+        const reason = event.reason;
+        const msg = "Unhandled promise rejection: " + (reason && reason.message ? reason.message : String(reason || "unknown"));
+        browserErrorLog.push(msg);
+        logDebug("BROWSER ERROR: " + msg);
+      });
+
+      // Capture console output (for AI Debugger)
+      try {
+        const origLog = console.log.bind(console);
+        const origWarn = console.warn.bind(console);
+        const origError = console.error.bind(console);
+
+        function pushConsole(kind, args) {
+          try {
+            const ts = new Date().toISOString().replace("T"," ").slice(0,19);
+            const parts = [];
+            for (let i = 0; i < args.length; i++) {
+              const a = args[i];
+              if (typeof a === "string") parts.push(a);
+              else {
+                try { parts.push(JSON.stringify(a)); }
+                catch (e) { parts.push(String(a)); }
+              }
+            }
+            consoleLogBuffer.push("[" + ts + "] " + kind + ": " + parts.join(" "));
+            if (consoleLogBuffer.length > 300) consoleLogBuffer.shift();
+          } catch (e) {}
+        }
+
+        console.log = function() { pushConsole("log", arguments); origLog.apply(console, arguments); };
+        console.warn = function() { pushConsole("warn", arguments); origWarn.apply(console, arguments); };
+        console.error = function() { pushConsole("error", arguments); origError.apply(console, arguments); };
+      } catch (e) {
+        logDebug("Console capture init failed: " + (e && e.message ? e.message : String(e)));
+      }
+
+      document.getElementById("signinBtn").addEventListener("click", signInManual);
+      document.getElementById("mediaFiles").addEventListener("change", updateMediaList);
+      document.getElementById("jobType").addEventListener("change", updateTimeOnSiteVisibility);
+      document.getElementById("timeArrived").addEventListener("change", recalcTimeOnSite);
+      document.getElementById("timeLeft").addEventListener("change", recalcTimeOnSite);
+
+      document.getElementById("generateBtn").addEventListener("click", () => {
+        generateReport().catch(err => {
+          logDebug("generateBtn error: " + (err && err.message ? err.message : String(err)));
+          alert("Error generating report. See debug panel.");
+        });
+      });
+      document.getElementById("viewBtn").addEventListener("click", () => {
+        viewReport().catch(err => {
+          logDebug("viewBtn error: " + (err && err.message ? err.message : String(err)));
+          alert("Error generating PDF. See debug panel.");
+        });
+      });
+      document.getElementById("copyBtn").addEventListener("click", () => {
+        copyReportText().catch(err => {
+          logDebug("copyBtn error: " + (err && err.message ? err.message : String(err)));
+        });
+      });
+      document.getElementById("downloadDocBtn").addEventListener("click", downloadWordDoc);
+      document.getElementById("sendBtn").addEventListener("click", sendReportEmail);
+
+      const eventSelect = document.getElementById("eventSelect");
+      eventSelect.addEventListener("change", function() {
+        if (eventSelect.value) aiParseSelectedEvent();
+      });
+
+      // Date range advanced panel handlers
+      const applyDateBtn = document.getElementById("applyDateRangeBtn");
+      const clearDateBtn = document.getElementById("clearDateRangeBtn");
+      if (applyDateBtn && clearDateBtn) {
+        applyDateBtn.addEventListener("click", () => {
+          const startInput = document.getElementById("startDateInput");
+          const endInput = document.getElementById("endDateInput");
+          const startVal = startInput && startInput.value;
+          const endVal = endInput && endInput.value;
+
+          if (!startVal || !endVal) {
+            setStatus("Both start and end dates are required for a custom range.", false);
+            return;
+          }
+          if (new Date(startVal) > new Date(endVal)) {
+            setStatus("Start date cannot be after end date.", false);
+            return;
+          }
+
+          customDateRange.start = startVal;
+          customDateRange.end = endVal;
+          logDebug("Custom date range set via UI.");
+          loadRecentEvents();
+        });
+
+        clearDateBtn.addEventListener("click", () => {
+          const startInput = document.getElementById("startDateInput");
+          const endInput = document.getElementById("endDateInput");
+          if (startInput) startInput.value = "";
+          if (endInput) endInput.value = "";
+          customDateRange.start = null;
+          customDateRange.end = null;
+          logDebug("Custom date range cleared; reverting to default window.");
+          loadRecentEvents();
+        });
+      }
+
+      // Calendar ID change -> update employee fallback & reload (if signed in)
+      const calInput = document.getElementById("calendarId");
+      if (calInput) {
+        calInput.addEventListener("change", () => {
+          const calId = (calInput.value || "").trim();
+          deriveEmployeeFromCalendarId(calId);
+          if (accessToken) {
+            logDebug("Calendar ID changed; reloading events.");
+            loadRecentEvents();
+          }
+        });
+      }
+
+      // AI Debugger handler
+      const runAiDebuggerBtn = document.getElementById("runAiDebuggerBtn");
+      if (runAiDebuggerBtn) runAiDebuggerBtn.addEventListener("click", handleRunAiDebugger);
+
+      // API key handlers
+      const saveBtn = document.getElementById("saveApiKeyBtn");
+      const clearBtn = document.getElementById("clearApiKeyBtn");
+      if (saveBtn) saveBtn.addEventListener("click", handleSaveApiKey);
+      if (clearBtn) clearBtn.addEventListener("click", handleClearApiKey);
+      refreshApiKeyStatus();
+
+      setStatus("Waiting for sign-in…", true);
+
+      window.setTimeout(() => {
+        try {
+          initAuth();
+        } catch (e) {
+          logDebug("initAuth error in timeout: " + e.message);
+        }
+      }, 0);
+    });
+  </script>
+</body>
+</html>
