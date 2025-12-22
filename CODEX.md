@@ -4,7 +4,7 @@ This monorepo hosts every AVD single-page tool under `/tools/<TOOL_CODE>/`. Each
 
 ## Pointers (always read first)
 - **UI invariants:** [`/AVD-UI-CORE.md`](./AVD-UI-CORE.md)
-- **Tool manuals:** `/tools/<TOOL_CODE>/context/<TOOL_CODE>.md`
+- **Tool manuals:** `/context/<TOOL_CODE>.md`
 - **Tool-level guardrails:** `/tools/<TOOL_CODE>/CODEX.md`
 
 ## Layout
@@ -18,8 +18,8 @@ This monorepo hosts every AVD single-page tool under `/tools/<TOOL_CODE>/`. Each
 ## Banner requirement (CODEX ONLY)
 Each tool `index.html` must include a **3-pointer banner** near the top of the document or main script that links to:
 1) `/CODEX.md`
-2) `/AVD-UI-CORE.md`
-3) `/tools/<TOOL_CODE>/context/<TOOL_CODE>.md`
+2) Tool-level `CODEX.md`
+3) `/context/<TOOL_CODE>.md`
 
 ## Editing discipline
 - Preserve OAuth + Calendar behaviour and OpenAI storage key (`localStorage['avd_job_report_openai_key']`).

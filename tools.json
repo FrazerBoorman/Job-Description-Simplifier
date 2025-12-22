@@ -4,5 +4,23 @@
     "name": "Job Description Simplifier",
     "path": "tools/JOB-SIMP/",
     "description": "Put whatever you put into the calendar into this and hit generate to make a clearer summary."
+  },
+  {
+    "code": "CONSULT-MEET",
+    "name": "Consultation Meeting Processor",
+    "path": "tools/consultation-meeting-processor/",
+    "description": "Transcribe consultation audio, summarise outcomes, suggest kit from your spreadsheet, and draft a proposal."
+  },
+  {
+    "code": "JOB-REPORT",
+    "name": "Job Report Generator",
+    "path": "tools/job-report-generator/",
+    "description": "Load recent jobs from Calendar, auto-fill the report, and export to preview, PDF, Word, or email."
+  },
+  {
+    "code": "OT-CALC",
+    "name": "AVD Overtime Calculator",
+    "path": "tools/overtime-calculator/",
+    "description": "Calculate daily overtime with optional Google Calendar intake and keep totals aligned with payable minutes."
   }
 ]
