@@ -1660,13 +1660,19 @@ Return STRICT JSON ONLY in this format:
       addSection("How things have been left", howFull);
       addSection("Advisories", advFull);
 
-      const safeType = (jobType || "job").toLowerCase().replace(/[^a-z0-9]+/g, "_");
-      const safeDate = (jobDate || "").replace(/[^0-9\-]+/g, "");
-      const fname = "job_report_" + safeType + (safeDate ? "_" + safeDate : "") + ".pdf";
+      const safeAddress = (jobAddr || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      const safeDate = (jobDate || "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      const nameParts = [];
+      if (safeAddress) nameParts.push(safeAddress);
+      if (safeDate) nameParts.push(safeDate);
+      const fname = (nameParts.length ? nameParts.join("_") : "job_report") + ".pdf";
 
-      const blobUrl = doc.output("bloburl");
+      const pdfBlob = doc.output("blob");
+      const pdfFile = new File([pdfBlob], fname, { type: "application/pdf" });
+      const blobUrl = URL.createObjectURL(pdfFile);
       logDebug("generatePdfAndOpen: opening PDF " + fname);
       window.open(blobUrl, "_blank");
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
     }
 
     async function viewReport() {
