@@ -1155,16 +1155,6 @@
       return null;
     }
 
-    function setCellValue(ws, address, value, type) {
-      const existing = ws[address];
-      const cell = { t: type, v: value };
-      if (existing) {
-        if (existing.s) cell.s = existing.s;
-        if (existing.z) cell.z = existing.z;
-      }
-      ws[address] = cell;
-    }
-
     function writeIntoChecklists(wb, selection) {
       const ws = wb.Sheets[CHECKLISTS_SHEET_NAME];
       if (!ws) throw new Error("No '" + CHECKLISTS_SHEET_NAME + "' sheet found in workbook.");
@@ -1209,19 +1199,19 @@
           if (!row) throw new Error("No empty rows found in MISC checklist area.");
 
           // Write Product (C) + Qty (G) always
-          setCellValue(ws, "C" + row, productName, "s");
-          if (qty != null) setCellValue(ws, "G" + row, qty, "n");
+          ws["C" + row] = { t: "s", v: productName };
+          if (qty != null) ws["G" + row] = { t: "n", v: qty };
 
           // Price/link only if explicitly allowed (Be Strict default OFF)
           if (allowPricingLinks) {
             const pn = safeNumber(priceExVat);
-            if (pn != null) setCellValue(ws, "F" + row, pn, "n");
-            if (link) setCellValue(ws, "J" + row, link, "s");
+            if (pn != null) ws["F" + row] = { t: "n", v: pn };
+            if (link) ws["J" + row] = { t: "s", v: link };
           }
 
           // Notes: include reason so the sheet has the justification
           const combinedNote = (notes ? notes : "") + (reason ? (notes ? " | " : "") + "Why: " + reason : "");
-          if (combinedNote) setCellValue(ws, "K" + row, combinedNote, "s");
+          if (combinedNote) ws["K" + row] = { t: "s", v: combinedNote };
 
           writePlan.push({ writeTo: "MISC", row, productName, qty, allowedPricingLinks: allowPricingLinks });
           continue;
@@ -1233,11 +1223,11 @@
         const row = firstEmptyRowInSection(ws, sec, "C");
         if (!row) throw new Error("No empty rows found in section: " + secName);
 
-        setCellValue(ws, "C" + row, productName, "s");
-        if (qty != null) setCellValue(ws, "G" + row, qty, "n");
+        ws["C" + row] = { t: "s", v: productName };
+        if (qty != null) ws["G" + row] = { t: "n", v: qty };
 
         const combinedNote = (notes ? notes : "") + (reason ? (notes ? " | " : "") + "Why: " + reason : "");
-        if (combinedNote) setCellValue(ws, "K" + row, combinedNote, "s");
+        if (combinedNote) ws["K" + row] = { t: "s", v: combinedNote };
 
         writePlan.push({ writeTo: secName, row, productName, qty });
       }
@@ -1268,7 +1258,7 @@
 
       try {
         const arrayBuffer = await file.arrayBuffer();
-        const wb = XLSX.read(arrayBuffer, { type:"array", cellStyles: true, cellNF: true, cellDates: true });
+        const wb = XLSX.read(arrayBuffer, { type:"array" });
 
         const { records, fixedRange } = readProductsTableFixed(wb);
         const guided = readGuidedKit(wb);
@@ -1470,7 +1460,7 @@
         return;
       }
 
-      const wbout = XLSX.write(lastProductSelection.workbook, { bookType:"xlsx", type:"array", cellStyles: true });
+      const wbout = XLSX.write(lastProductSelection.workbook, { bookType:"xlsx", type:"array" });
       const blob = new Blob([wbout], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
