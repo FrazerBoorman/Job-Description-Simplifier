@@ -1,0 +1,12 @@
+{
+  "name": "consultation-meeting-processor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "patch-template": "node patch-template.mjs",
+    "verify-template": "node verify-template.mjs"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  }
+}

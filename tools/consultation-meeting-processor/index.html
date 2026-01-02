@@ -8,8 +8,10 @@
   <!-- Google OAuth client ID (same as other tools) -->
   <meta name="google-oauth-client-id"
         content="105230737516-l8tlnck4idde83pjetrotobpt8borvts.apps.googleusercontent.com" />
-  <!-- SheetJS for Excel reading/writing – primary CDN -->
+  <!-- SheetJS for Excel reading (proposal step) -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <!-- ExcelJS for formatting-preserving template edits -->
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 
@@ -619,6 +621,21 @@
       return Number.isFinite(n) ? n : null;
     }
 
+    function cellValueToText(value) {
+      if (value == null) return "";
+      if (typeof value === "object") {
+        if (value.text) return String(value.text).trim();
+        if (Array.isArray(value.richText)) {
+          return value.richText.map(part => part.text || "").join("").trim();
+        }
+        if (value.formula != null) {
+          if (value.result != null) return String(value.result).trim();
+          return "";
+        }
+      }
+      return String(value).trim();
+    }
+
     // ==============
     // DEBUG LOGGER
     // ==============
@@ -1059,32 +1076,25 @@
     }
 
     function readProductsTableFixed(wb) {
-      const sheet = wb.Sheets[PRODUCTS_SHEET_NAME];
+      const sheet = wb.getWorksheet(PRODUCTS_SHEET_NAME);
       if (!sheet) throw new Error("No '" + PRODUCTS_SHEET_NAME + "' sheet found in template.");
 
       // Read A3:H500 only (Be Strict: match your workbook)
-      const range = {
-        s: { r: PRODUCTS_HEADER_ROW_1BASED - 1, c: PRODUCTS_COL_START - 1 }, // A3
-        e: { r: PRODUCTS_DATA_END_ROW_1BASED - 1, c: PRODUCTS_COL_END - 1 }  // H500
-      };
-
-      const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, range });
-      if (!aoa || !aoa.length) throw new Error("Products range A3:H500 appears empty.");
-
-      const headers = aoa[0].map(h => asText(h));
-      const dataRows = aoa.slice(1); // corresponds to rows 4..500
+      const headers = [];
+      const headerRow = sheet.getRow(PRODUCTS_HEADER_ROW_1BASED);
+      for (let c = PRODUCTS_COL_START; c <= PRODUCTS_COL_END; c++) {
+        headers.push(asText(cellValueToText(headerRow.getCell(c).value)));
+      }
 
       const records = [];
-      for (let i = 0; i < dataRows.length; i++) {
-        const row = dataRows[i] || [];
-        const productName = asText(row[0]); // column A in the range
-        const excelRowIndex = PRODUCTS_DATA_START_ROW_1BASED + i; // 4 + i
+      for (let r = PRODUCTS_DATA_START_ROW_1BASED; r <= PRODUCTS_DATA_END_ROW_1BASED; r++) {
+        const row = sheet.getRow(r);
+        const productName = asText(cellValueToText(row.getCell(PRODUCTS_COL_START).value));
         if (!productName) continue;
-
-        const obj = { rowIndex: excelRowIndex };
-        for (let c = 0; c < headers.length; c++) {
-          const key = headers[c] || ("COL" + (c + 1));
-          obj[key] = row[c];
+        const obj = { rowIndex: r };
+        for (let c = PRODUCTS_COL_START; c <= PRODUCTS_COL_END; c++) {
+          const key = headers[c - PRODUCTS_COL_START] || ("COL" + c);
+          obj[key] = row.getCell(c).value;
         }
         records.push(obj);
       }
@@ -1093,24 +1103,19 @@
     }
 
     function readGuidedKit(wb) {
-      const sheet = wb.Sheets[GUIDED_SHEET_NAME];
+      const sheet = wb.getWorksheet(GUIDED_SHEET_NAME);
       if (!sheet) return { available: false, items: [] };
 
       // Guided is mostly a human-facing sheet; we just harvest a simple list of product strings as “frequent kit”.
       // Find “Product” header and then capture column C under it in blocks.
-      const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      if (!aoa || !aoa.length) return { available: false, items: [] };
-
       const items = [];
-      for (let r = 0; r < aoa.length; r++) {
-        const row = aoa[r] || [];
-        const maybeProduct = asText(row[2]); // column C
-        // Heuristic: guided product rows tend to be long-ish and not formula text
+      sheet.eachRow((row) => {
+        const maybeProduct = asText(cellValueToText(row.getCell(3).value)); // column C
         if (maybeProduct && maybeProduct.length > 3 && !maybeProduct.includes("VLOOKUP(")) {
           items.push(maybeProduct);
         }
-      }
-      // Deduplicate
+      });
+
       const dedup = Array.from(new Set(items));
       return { available: true, items: dedup.slice(0, 250) };
     }
@@ -1120,8 +1125,8 @@
       const headings = [];
       const MAX_SCAN = 2000;
       for (let r = 1; r <= MAX_SCAN; r++) {
-        const v = ws["B" + r] ? ws["B" + r].v : null;
-        const s = asText(v);
+        const v = ws.getCell("B" + r).value;
+        const s = asText(cellValueToText(v));
         if (s && s.toUpperCase().includes("CHECKLIST")) {
           headings.push({ row: r, title: s });
         }
@@ -1148,15 +1153,15 @@
     function firstEmptyRowInSection(ws, section, colLetter) {
       const col = colLetter;
       for (let r = section.startRow; r <= section.endRow; r++) {
-        const cell = ws[col + r];
-        const v = cell ? cell.v : null;
+        const cell = ws.getCell(col + r);
+        const v = cellValueToText(cell.value);
         if (!asText(v)) return r;
       }
       return null;
     }
 
     function writeIntoChecklists(wb, selection) {
-      const ws = wb.Sheets[CHECKLISTS_SHEET_NAME];
+      const ws = wb.getWorksheet(CHECKLISTS_SHEET_NAME);
       if (!ws) throw new Error("No '" + CHECKLISTS_SHEET_NAME + "' sheet found in workbook.");
 
       const sections = findChecklistSections(ws);
@@ -1176,7 +1181,6 @@
       }
 
       const writePlan = [];
-      const allowPricingLinks = !!(document.getElementById("allowAIPricingLinks") && document.getElementById("allowAIPricingLinks").checked);
 
       for (const item of (selection || [])) {
         const type = asText(item.type) || "existing"; // existing | new
@@ -1185,8 +1189,6 @@
         const qty = safeNumber(item.quantity);
         const notes = asText(item.notes);
         const reason = asText(item.reason);
-        const link = asText(item.link);
-        const priceExVat = item.priceExVat;
 
         if (!productName) continue;
 
@@ -1199,21 +1201,14 @@
           if (!row) throw new Error("No empty rows found in MISC checklist area.");
 
           // Write Product (C) + Qty (G) always
-          ws["C" + row] = { t: "s", v: productName };
-          if (qty != null) ws["G" + row] = { t: "n", v: qty };
-
-          // Price/link only if explicitly allowed (Be Strict default OFF)
-          if (allowPricingLinks) {
-            const pn = safeNumber(priceExVat);
-            if (pn != null) ws["F" + row] = { t: "n", v: pn };
-            if (link) ws["J" + row] = { t: "s", v: link };
-          }
+          ws.getCell("C" + row).value = productName;
+          if (qty != null) ws.getCell("G" + row).value = qty;
 
           // Notes: include reason so the sheet has the justification
           const combinedNote = (notes ? notes : "") + (reason ? (notes ? " | " : "") + "Why: " + reason : "");
-          if (combinedNote) ws["K" + row] = { t: "s", v: combinedNote };
+          if (combinedNote) ws.getCell("K" + row).value = combinedNote;
 
-          writePlan.push({ writeTo: "MISC", row, productName, qty, allowedPricingLinks: allowPricingLinks });
+          writePlan.push({ writeTo: "MISC", row, productName, qty });
           continue;
         }
 
@@ -1223,11 +1218,11 @@
         const row = firstEmptyRowInSection(ws, sec, "C");
         if (!row) throw new Error("No empty rows found in section: " + secName);
 
-        ws["C" + row] = { t: "s", v: productName };
-        if (qty != null) ws["G" + row] = { t: "n", v: qty };
+        ws.getCell("C" + row).value = productName;
+        if (qty != null) ws.getCell("G" + row).value = qty;
 
         const combinedNote = (notes ? notes : "") + (reason ? (notes ? " | " : "") + "Why: " + reason : "");
-        if (combinedNote) ws["K" + row] = { t: "s", v: combinedNote };
+        if (combinedNote) ws.getCell("K" + row).value = combinedNote;
 
         writePlan.push({ writeTo: secName, row, productName, qty });
       }
@@ -1240,9 +1235,9 @@
         setAiStatus("Process the meeting first to get a structured summary.", true);
         return;
       }
-      if (typeof XLSX === "undefined") {
-        setAiStatus("Spreadsheet library (XLSX) is not available – wait a moment and try again.", true);
-        logDebug("handleGenerateProducts: XLSX is undefined.");
+      if (typeof ExcelJS === "undefined") {
+        setAiStatus("Spreadsheet library (ExcelJS) is not available – wait a moment and try again.", true);
+        logDebug("handleGenerateProducts: ExcelJS is undefined.");
         return;
       }
 
@@ -1258,7 +1253,8 @@
 
       try {
         const arrayBuffer = await file.arrayBuffer();
-        const wb = XLSX.read(arrayBuffer, { type:"array" });
+        const wb = new ExcelJS.Workbook();
+        await wb.xlsx.load(arrayBuffer);
 
         const { records, fixedRange } = readProductsTableFixed(wb);
         const guided = readGuidedKit(wb);
@@ -1289,7 +1285,7 @@
           "3) Choose sensible quantities; if unknown, use 1 and explain uncertainty in reason.\n" +
           "4) Only propose NEW products if nothing suitable exists in Products.\n" +
           "5) If allowPricingLinks=false, then for NEW items set priceExVat=null and link=\"\".\n" +
-          "6) If allowPricingLinks=true, you may suggest price/link BUT MUST label in reason that it requires verification.\n\n" +
+          "6) Even if allowPricingLinks=true, the tool writes ONLY Product/Qty/Notes; price/link are advisory only.\n\n" +
           "Return STRICT JSON ONLY in this format:\n" +
           "{\n" +
           "  \"items\": [\n" +
@@ -1455,22 +1451,28 @@
         alert("Generate & write into Checklists first.");
         return;
       }
-      if (typeof XLSX === "undefined") {
-        alert("Spreadsheet library (XLSX) is not available.");
+      if (typeof ExcelJS === "undefined") {
+        alert("Spreadsheet library (ExcelJS) is not available.");
         return;
       }
 
-      const wbout = XLSX.write(lastProductSelection.workbook, { bookType:"xlsx", type:"array" });
-      const blob = new Blob([wbout], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "template_populated_checklists.xlsx";
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(a.href);
-      }, 0);
+      lastProductSelection.workbook.xlsx.writeBuffer()
+        .then((buffer) => {
+          const blob = new Blob([buffer], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = "template_populated_checklists.xlsx";
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(a.href);
+          }, 0);
+        })
+        .catch((e) => {
+          console.error(e);
+          alert("Could not generate workbook download.");
+        });
     }
 
     // ======================
