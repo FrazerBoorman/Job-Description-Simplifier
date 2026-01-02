@@ -3,7 +3,7 @@
 ## Identity
 - Tool name: Job Description Simplifier
 - Tool code: JOB-SIMP
-- Version: v0.12
+- Version: v0.13
 - Last updated: 2025-12-21
 
 ## Purpose
