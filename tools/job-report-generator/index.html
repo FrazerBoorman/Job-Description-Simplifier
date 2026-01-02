@@ -1665,7 +1665,7 @@ Return STRICT JSON ONLY in this format:
         const parts = dateStr.split("-");
         if (parts.length === 3 && parts[0].length === 4) {
           const year = parts[0].slice(-2);
-          return parts[2] + "/" + parts[1] + "/" + year;
+          return parts[2] + "-" + parts[1] + "-" + year;
         }
         return dateStr;
       }
